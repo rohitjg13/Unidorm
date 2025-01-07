@@ -1,4 +1,4 @@
-import { Group, SimpleGrid, Stack, Button, Textarea } from "@mantine/core";
+import { Group, SimpleGrid, Stack, Button, Textarea, Box, Image } from "@mantine/core";
 import styles from "../../styles/Template.module.css";
 import React, { useEffect, useState } from "react";
 import { ArrowBack, AccountCircle } from "@material-ui/icons";
@@ -48,6 +48,9 @@ export default function IndexPage() {
             </Button>
         </SimpleGrid>
       </Group>
+      <Box style={{ position: "fixed", bottom: 0, width: "100vw"}}>
+              <Image src="../../images/vector.svg" radius="md" style={{ width: "100%", margin: 0 }} />
+      </Box>
     </Stack>
   );
 }

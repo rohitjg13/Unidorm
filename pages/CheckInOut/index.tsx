@@ -45,25 +45,27 @@ export default function IndexPage() {
         <AccountCircle style={{ scale: "1.75", color: "white" }} />
       </SimpleGrid>
 
-      <Group className={styles.bottom}>
-        <Group style={{ display: "flex", flexDirection: "column", justifyContent: "spece-evenly", alignItems: "center", height: "80%" }}>
-            <Group style={{ width: "100vw", display: "flex", alignItems: "center", justifyContent: "space-evenly" }}>
-                <UnstyledButton style={buttonStyle}>
-                    <SimpleGrid cols={1} style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
-                        <LoginIcon style={{ scale: "2.25", color: "#3f6cd4" }} />
-                        <Text style={{ color: "#3f6cd4", fontSize: "1.25rem" }}>Check In</Text>
-                    </SimpleGrid>
-                </UnstyledButton>
-                <UnstyledButton style={buttonStyle}>
-                    <SimpleGrid cols={1} style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
-                        <LogoutIcon style={{ scale: "2.25", color: "#3f6cd4" }} />
-                        <Text style={{ color: "#3f6cd4", fontSize: "1.25rem" }}>Check Out</Text>
-                    </SimpleGrid>
-                </UnstyledButton>
-            </Group>
-            <Button variant="outline" color="blue" style={{ width: "50%", borderRadius: 10 }}>Approval Status</Button>
+      <Stack className={styles.bottom}>
+        <Group style={{ display: "flex", flexDirection: "column", justifyContent: "centre", alignItems: "center", height: "85vh", position: "relative" }}>
+            <Stack gap={"6rem"} style={{ display: "flex", flexDirection: "column", justifyContent: "spece-between", alignItems: "center", height: "100%" }}>
+                <Group style={{ width: "100vw", display: "flex", alignItems: "center", justifyContent: "space-evenly" }}>
+                    <UnstyledButton style={buttonStyle}>
+                        <SimpleGrid cols={1} style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+                            <LoginIcon style={{ scale: "2.25", color: "#3f6cd4" }} />
+                            <Text style={{ color: "#3f6cd4", fontSize: "1.25rem" }}>Check In</Text>
+                        </SimpleGrid>
+                    </UnstyledButton>
+                    <UnstyledButton style={buttonStyle}>
+                        <SimpleGrid cols={1} style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+                            <LogoutIcon style={{ scale: "2.25", color: "#3f6cd4" }} />
+                            <Text style={{ color: "#3f6cd4", fontSize: "1.25rem" }}>Check Out</Text>
+                        </SimpleGrid>
+                    </UnstyledButton>
+                </Group>
+                <Button variant="outline" color="blue" size="xl" style={{ width: "80%", borderRadius: 10 }}>Approval Status</Button>
+            </Stack>
         </Group>
-      </Group>
+      </Stack>
 
       <Box style={{ position: "fixed", bottom: 0, width: "100vw"}}>
               <Image src="../../images/vector.svg" radius="md" style={{ width: "100%", margin: 0 }} />

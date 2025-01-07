@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/breadcrumb"
 import LoginIcon from '@mui/icons-material/Login';
 import LogoutIcon from '@mui/icons-material/Logout';
-import { shadows } from "@mui/system";
 
 export default function IndexPage() {
     const buttonStyle = {

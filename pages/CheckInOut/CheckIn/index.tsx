@@ -1,5 +1,5 @@
 import { Group, SimpleGrid, Stack, Box, Image, TextInput, ActionIcon, rem } from "@mantine/core";
-import styles from "../../styles/Template.module.css";
+import styles from "../../../styles/Template.module.css";
 import React, { useEffect, useState, useRef } from "react";
 import { ArrowBack, AccountCircle } from "@material-ui/icons";
 import {
@@ -10,11 +10,11 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import classes from "../../styles/Mantine/FloatingLabelInput.module.css";
+import classes from "../../../styles/Mantine/FloatingLabelInput.module.css";
 import { CalendarIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Button } from "../components/ui/button"
-import { Calendar } from "../components/ui/calendar"
+import { Button } from "../../components/ui/button"
+import { Calendar } from "../../components/ui/calendar"
 import {
     Popover,
     PopoverContent,

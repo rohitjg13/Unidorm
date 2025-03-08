@@ -8,7 +8,9 @@ import {
   IconArrowDown, 
   IconSend,
   IconChevronDown,
-  IconChevronRight
+  IconChevronRight,
+  IconMaximize,
+  IconMinimize
 } from '@tabler/icons-react';
 import styles from "../../styles/Template.module.css";
 import {
@@ -66,6 +68,7 @@ export default function PostDetail() {
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState<{ [key: string]: string }>({});
   const [submittingNestedReply, setSubmittingNestedReply] = useState<Record<string, boolean>>({});
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
   // Check authentication status
   useEffect(() => {
@@ -753,18 +756,53 @@ const formatDate = (dateString: string | undefined): string => {
                   {post.image && (
                     <div style={{ 
                       width: '100%', 
-                      maxHeight: '50vh', // Viewport-based height for mobile
-                      overflow: 'hidden', 
+                      position: 'relative',
                       borderRadius: '8px',
                       margin: '0.5rem 0'
                     }}>
-                      <Image 
-                        src={post.image} 
-                        height={300} 
-                        fit="cover"
-                        radius="md" 
-                        alt="Post Image" 
-                      />
+                      <div style={{ 
+                        position: 'relative', 
+                        maxHeight: expandedImage === post.image ? '80vh' : '400px',
+                        overflow: expandedImage === post.image ? 'visible' : 'hidden',
+                        transition: 'all 0.3s ease',
+                        borderRadius: '8px',
+                      }}>
+                        <Image 
+                          src={post.image} 
+                          fit="contain"
+                          style={{
+                            maxHeight: expandedImage === post.image ? '80vh' : '400px',
+                            width: '100%',
+                            objectFit: 'contain',
+                            backgroundColor: expandedImage === post.image ? 'rgba(0,0,0,0.7)' : 'transparent',
+                            borderRadius: '8px',
+                            transition: 'all 0.3s ease',
+                          }}
+                          alt="Post Image" 
+                        />
+                        
+                        {/* Expand/collapse button */}
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedImage(expandedImage === post.image ? null : post.image);
+                          }}
+                          size="sm"
+                          variant="light"
+                          style={{
+                            position: 'absolute',
+                            bottom: '10px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            zIndex: 2,
+                            backgroundColor: 'rgba(255,255,255,0.8)',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                          }}
+                          leftSection={expandedImage === post.image ? <IconMinimize size={16} /> : <IconMaximize size={16} />}
+                        >
+                          {expandedImage === post.image ? 'Collapse' : 'Expand'}
+                        </Button>
+                      </div>
                     </div>
                   )}
                   
@@ -920,6 +958,67 @@ const formatDate = (dateString: string | undefined): string => {
           </Text>
         </Stack>
       </Modal>
+      
+      {/* Fullscreen image overlay */}
+      {expandedImage && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.85)',
+            zIndex: 1000,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: '20px',
+          }}
+          onClick={() => setExpandedImage(null)}
+        >
+          <div style={{ position: 'relative', maxWidth: '100%', maxHeight: '100%' }}>
+            <Image 
+              src={expandedImage} 
+              fit="contain"
+              style={{
+                maxHeight: '90vh',
+                maxWidth: '90vw',
+                objectFit: 'contain',
+              }}
+              alt="Full size image" 
+            />
+            <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpandedImage(null);
+              }}
+              size="sm"
+              variant="subtle"
+              color="gray"
+              style={{
+                position: 'absolute',
+                top: '10px',
+                right: '10px',
+                zIndex: 1001,
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                padding: 0,
+                minWidth: 'unset',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(255,255,255,0.2)',
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18 6L6 18M6 6L18 18" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </Button>
+          </div>
+        </div>
+      )}
     </Stack>
   );
 }

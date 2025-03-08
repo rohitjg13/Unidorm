@@ -1,4 +1,4 @@
-import { Card, Text, Group, Stack, Button, Image, Divider, SimpleGrid, ScrollArea, Modal, TextInput, Textarea } from "@mantine/core";
+import { Card, Text, Group, Stack, Button, Image, Divider, SimpleGrid, ScrollArea, Modal, TextInput, Textarea, FileInput } from "@mantine/core";
 import { ArrowBack, AccountCircle, ArrowUpward, ArrowDownward, ChatBubble, Add } from "@material-ui/icons";
 import { useRouter } from "next/router";
 import React, { useState, useEffect } from "react";
@@ -18,6 +18,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 import supabase from "@/utils/supabase/client";
+import { v4 as uuidv4 } from 'uuid'; // You'll need to install this package: npm install uuid
 
 const bottomStyles = {
   backgroundColor: '#fff',
@@ -47,12 +48,15 @@ export default function Forum() {
   const [newPost, setNewPost] = useState({
     title: '',
     content: '',
-    image: ''
+    image: null,
+    imagePreview: null
   });
   const [user, setUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [userVotes, setUserVotes] = useState({});
   const [initialVotesLoaded, setInitialVotesLoaded] = useState(false);
+  const [trendingTimePeriod, setTrendingTimePeriod] = useState('all');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Check authentication status on component mount
   useEffect(() => {
@@ -286,11 +290,20 @@ export default function Forum() {
         return;
       }
       
-      // Create post data object without ID - Supabase will generate it
+      // Show loading state
+      setIsSubmitting(true);
+      
+      // Upload image if one is selected
+      let imageUrl = null;
+      if (newPost.image) {
+        imageUrl = await uploadImage(newPost.image);
+      }
+      
+      // Create post data object
       const postData = {
         title: newPost.title,
         content: newPost.content,
-        image: newPost.image || null,
+        image: imageUrl, // Use the uploaded image URL
         upvotes: 0,
         downvotes: 0,
         user_id: user.id,
@@ -308,12 +321,14 @@ export default function Forum() {
         return;
       }
 
-      // Update local state with the returned data (which includes the generated ID)
+      // Update local state with the returned data
       setForumPosts(posts => [data[0], ...posts]);
       setNewPostModalOpen(false);
-      setNewPost({ title: '', content: '', image: '' });
+      setNewPost({ title: '', content: '', image: null, imagePreview: null });
     } catch (error) {
       console.error('Unexpected error during post creation:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -372,6 +387,55 @@ export default function Forum() {
     }
   }, [user]);
 
+  // Add this function to filter posts based on time period
+  const getFilteredPosts = (allPosts, timePeriod) => {
+    const now = new Date();
+    
+    // Filter posts by time period
+    const filtered = allPosts.filter(post => {
+      if (!post.created_at) return false;
+      
+      const postDate = new Date(post.created_at);
+      
+      switch (timePeriod) {
+        case 'today':
+          // Same day, month, and year
+          return postDate.getDate() === now.getDate() && 
+                 postDate.getMonth() === now.getMonth() && 
+                 postDate.getFullYear() === now.getFullYear();
+        case 'week':
+          // Within the last 7 days
+          const weekAgo = new Date(now);
+          weekAgo.setDate(now.getDate() - 7);
+          return postDate >= weekAgo;
+        case 'month':
+          // Same month and year
+          const monthAgo = new Date(now);
+          monthAgo.setMonth(now.getMonth() - 1);
+          return postDate >= monthAgo;
+        case 'year':
+          // Same year
+          return postDate.getFullYear() === now.getFullYear();
+        case 'all':
+        default:
+          return true;
+      }
+    });
+    
+    // Sort by upvotes (highest first)
+    return filtered.sort((a, b) => {
+      const aUpvotes = a.upvotes || 0;
+      const bUpvotes = b.upvotes || 0;
+      
+      if (bUpvotes !== aUpvotes) {
+        return bUpvotes - aUpvotes;
+      }
+      
+      // If upvotes are equal, sort by recency
+      return new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime();
+    });
+  };
+
   // Render a single post card
   const renderPostCard = (post) => (
     <Card 
@@ -381,7 +445,10 @@ export default function Forum() {
       radius="md" 
       withBorder
       onClick={() => goToPostDetail(post.id)}
-      style={{ cursor: 'pointer' }}
+      style={{ 
+        cursor: 'pointer',
+        width: '100%' // Ensure cards take full width
+      }}
     >
       <Stack>
         <Group position="apart">
@@ -391,9 +458,30 @@ export default function Forum() {
           </Text>
         </Group>
         <Text size="sm" color="gray">Posted by {post.username || post.user || "Anonymous"}</Text>
+        
+        {/* Update image display to maintain aspect ratio */}
         {post.image && (
-          <Image src={post.image} height={150} radius="md" alt="Post Image" />
+          <div style={{ 
+            width: '100%', 
+            height: '200px', 
+            overflow: 'hidden', 
+            position: 'relative',
+            borderRadius: '8px'
+          }}>
+            <Image 
+              src={post.image} 
+              alt="Post Image" 
+              fit="contain"
+              style={{
+                maxHeight: '200px',
+                maxWidth: '100%',
+                margin: '0 auto',
+                display: 'block'
+              }}
+            />
+          </div>
         )}
+        
         <Text size="sm">{post.content}</Text>
         <Divider />
         <Group>
@@ -474,25 +562,13 @@ export default function Forum() {
       </SimpleGrid>
       
       <Group style={{ ...bottomStyles, position: 'relative' }}>
-        {/* Floating action button to create new post */}
-        <Button 
-          style={{
-            position: 'fixed',
-            bottom: '20px',
-            right: '20px',
-            borderRadius: '50%',
-            width: '60px',
-            height: '60px',
-            padding: 0,
-            zIndex: 1000,
-            backgroundColor: '#3f6cd4'
-          }}
-          onClick={showNewPostModal}
-        >
-          <Add style={{ fontSize: '24px' }} />
-        </Button>
-
-        <Stack gap="lg" p="md" style={{ maxWidth: "600px", margin: "auto", height: "100%", width: "100%" }}>
+        <Stack gap="lg" p="md" style={{ 
+          maxWidth: "600px", 
+          margin: "auto", 
+          height: "100%", 
+          width: "100%",
+          position: 'relative' // Add relative positioning to the container
+        }}>
           <Tabs defaultValue="new" className="w-full">
             <TabsList className="grid w-[80%] mx-auto grid-cols-2">
               <TabsTrigger value="new">New</TabsTrigger>
@@ -516,8 +592,20 @@ export default function Forum() {
               </ScrollArea>
             </TabsContent>
             <TabsContent value="trending">
+              <div style={{ padding: "0 0 16px 0" }}>
+                <Tabs value={trendingTimePeriod} onValueChange={setTrendingTimePeriod} className="w-full">
+                  <TabsList className="grid w-full grid-cols-5">
+                    <TabsTrigger value="today">Today</TabsTrigger>
+                    <TabsTrigger value="week">Week</TabsTrigger>
+                    <TabsTrigger value="month">Month</TabsTrigger>
+                    <TabsTrigger value="year">Year</TabsTrigger>
+                    <TabsTrigger value="all">All</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+              
               <ScrollArea
-                style={{ height: "calc(100vh - 180px)" }}
+                style={{ height: "calc(100vh - 230px)" }}
                 scrollbarSize={0}
               >
                 {loading ? (
@@ -525,11 +613,12 @@ export default function Forum() {
                 ) : (
                   <Stack spacing="md">
                     {forumPosts.length > 0 ? 
-                      [...forumPosts]
-                        .sort((a, b) => b.upvotes - a.upvotes)
-                        .map(renderPostCard) : 
+                      getFilteredPosts(forumPosts, trendingTimePeriod).map(renderPostCard) : 
                       <Text align="center" py="xl">No posts yet. Be the first to post!</Text>
                     }
+                    {getFilteredPosts(forumPosts, trendingTimePeriod).length === 0 && forumPosts.length > 0 && (
+                      <Text align="center" py="xl">No posts for this time period. Try another filter.</Text>
+                    )}
                   </Stack>
                 )}
               </ScrollArea>
@@ -537,6 +626,25 @@ export default function Forum() {
           </Tabs>
         </Stack>
       </Group>
+
+      {/* Floating action button - moved outside the content area */}
+      <Button 
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          borderRadius: '50%',
+          width: '48px',
+          height: '48px',
+          padding: 0,
+          zIndex: 1000,
+          backgroundColor: '#3f6cd4',
+          boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+        }}
+        onClick={showNewPostModal}
+      >
+        <Add style={{ fontSize: '20px' }} />
+      </Button>
 
       {/* New Post Modal */}
       <Modal
@@ -561,15 +669,64 @@ export default function Forum() {
             onChange={(e) => setNewPost({...newPost, content: e.target.value})}
             required
           />
-          <TextInput
-            label="Image URL (optional)"
-            placeholder="Enter image URL"
-            value={newPost.image}
-            onChange={(e) => setNewPost({...newPost, image: e.target.value})}
+          
+          {/* Replace the TextInput with FileInput for image */}
+          <FileInput
+            label="Upload Image (optional)"
+            placeholder="Choose image"
+            accept="image/*"
+            onChange={(file) => {
+              if (file) {
+                // Create a preview URL for the selected file
+                const preview = URL.createObjectURL(file);
+                setNewPost({...newPost, image: file, imagePreview: preview});
+              } else {
+                setNewPost({...newPost, image: null, imagePreview: null});
+              }
+            }}
+            clearable
           />
+          
+          {/* Show image preview if available */}
+          {newPost.imagePreview && (
+            <div style={{ position: 'relative', marginTop: '8px' }}>
+              <Image 
+                src={newPost.imagePreview} 
+                height={150} 
+                fit="cover" 
+                radius="md" 
+                alt="Preview" 
+              />
+              <Button 
+                size="xs" 
+                color="red" 
+                style={{ 
+                  position: 'absolute', 
+                  top: '8px', 
+                  right: '8px',
+                  borderRadius: '50%',
+                  padding: 0,
+                  width: '24px',
+                  height: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minWidth: 'unset'
+                }}
+                onClick={() => setNewPost({...newPost, image: null, imagePreview: null})}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </Button>
+            </div>
+          )}
+          
+          {/* Add loading state to the button */}
           <Button 
             onClick={handleCreatePost}
-            disabled={!newPost.title || !newPost.content}
+            disabled={!newPost.title || !newPost.content || isSubmitting}
+            loading={isSubmitting}
             style={{ backgroundColor: '#3f6cd4' }}
           >
             Post
@@ -627,3 +784,54 @@ export default function Forum() {
     </Stack>
   );
 }
+
+// Function to handle image upload to Supabase Storage - FIXED
+const uploadImage = async (file) => {
+  try {
+    if (!file) return null;
+    
+    // Generate a unique filename to prevent collisions
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${uuidv4()}.${fileExt}`;
+    
+    // IMPORTANT: Don't include the bucket name in the file path
+    // Just use a simple path without 'forum-images/'
+    const filePath = `posts/${fileName}`; // Or use 'posts/${fileName}' but not 'forum-images/...'
+    
+    // Upload the file to Supabase Storage
+    const { error: uploadError } = await supabase
+      .storage
+      .from('forum-images') // This specifies the bucket name already
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true // Changed to true for better reliability
+      });
+    
+    if (uploadError) {
+      console.error('Error uploading image:', uploadError);
+      
+      // If bucket not found, give more specific error
+      if (uploadError.message && uploadError.message.includes("Bucket not found")) {
+        alert('Storage setup issue: Bucket not found. Please contact support.');
+      } else {
+        alert(`Upload failed: ${uploadError.message}`);
+      }
+      return null;
+    }
+
+    // Get the public URL for the uploaded image
+    console.log(filePath);
+    const { data } = supabase
+      .storage
+      .from('forum-images')
+      .getPublicUrl(filePath);
+
+    console.log(data.publicUrl);
+    console.log("Successfully uploaded image. URL:", data.publicUrl);
+    return data.publicUrl;
+  } catch (error) {
+    console.error('Unexpected error during image upload:', error);
+    alert('Something went wrong with the image upload. Please try again.');
+    return null;
+  }
+};

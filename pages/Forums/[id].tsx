@@ -1,7 +1,15 @@
 import { useRouter } from "next/router";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Card, Text, Group, Stack, Button, Image, Divider, SimpleGrid, ScrollArea, Modal, Textarea } from "@mantine/core";
-import { ArrowBack, AccountCircle, ArrowUpward, ArrowDownward, Send } from "@material-ui/icons";
+import { 
+  IconArrowLeft, 
+  IconUser, 
+  IconArrowUp, 
+  IconArrowDown, 
+  IconSend,
+  IconChevronDown,
+  IconChevronRight
+} from '@tabler/icons-react';
 import styles from "../../styles/Template.module.css";
 import {
   Breadcrumb,
@@ -18,39 +26,61 @@ const bottomStyles = {
   minHeight: '95vh',
   width: '100%',
   display: 'flex',
-  flexDirection: 'column',
+  flexDirection: 'column' as 'column',
   alignItems: 'center',
   justifyContent: 'flex-start',
   paddingTop: '0rem',
   fontSize: 'calc(10px + 2vmin)',
   color: '#3f6cd4',
-  position: 'relative',
+  position: 'relative' as 'relative',
   top: 0,
   bottom: 0,
   margin: 0,
-  borderRadius: '4rem 4rem 0 0',
   boxShadow: '0px 0px 10px 0px rgba(0, 0, 0, 0.1)',
 };
+
+// Update Reply interface to support parent_id for nested replies
+interface Reply {
+  id: string;
+  post_id: string;
+  content: string;
+  user_id: string;
+  username: string;
+  created_at: string;
+  parent_id?: string;  // ID of the parent reply (if this is a nested reply)
+  replies?: Reply[];   // Nested replies
+}
 
 export default function PostDetail() {
   const router = useRouter();
   const { id } = router.query;
   
   const [post, setPost] = useState<{ id: string; title: string; content: string; created_at: string; username: string; image?: string; upvotes: number; downvotes: number } | null>(null);
-  const [replies, setReplies] = useState([]);
+  const [replies, setReplies] = useState<Reply[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<{ id: string; email: string; user_metadata?: { name?: string } } | null>(null);
   const [newReply, setNewReply] = useState("");
   const [loginModalOpen, setLoginModalOpen] = useState(false);
-  const [userVote, setUserVote] = useState(null);
+  const [userVote, setUserVote] = useState<'up' | 'down' | null>(null);
   const [submittingReply, setSubmittingReply] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState<{ [key: string]: string }>({});
+  const [submittingNestedReply, setSubmittingNestedReply] = useState<Record<string, boolean>>({});
 
   // Check authentication status
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const { data: { user: currentUser } } = await supabase.auth.getUser();
-        setUser(currentUser);
+        if (currentUser) {
+          setUser({
+            id: currentUser.id,
+            email: currentUser.email || '',
+            user_metadata: currentUser.user_metadata,
+          });
+        } else {
+          setUser(null);
+        }
         
         if (currentUser && id) {
           // Fetch user's vote for this post
@@ -153,110 +183,116 @@ export default function PostDetail() {
   };
 
   // Handle voting
-  const handleVote = async (voteType) => {
+interface VoteData {
+    post_id: string;
+    user_id: string;
+    vote_type: 'up' | 'down';
+}
+
+const handleVote = async (voteType: 'up' | 'down') => {
     try {
-      if (!checkAuth()) return;
-      if (!post) return;
-      
-      const updatedVotes = { ...post };
-      
-      // If user already voted the same way, remove the vote
-      if (userVote === voteType) {
-        if (voteType === 'up') {
-          updatedVotes.upvotes = Math.max(0, post.upvotes - 1);
-        } else {
-          updatedVotes.downvotes = Math.max(0, post.downvotes - 1);
-        }
+        if (!checkAuth()) return;
+        if (!post) return;
         
-        // Remove vote from database
-        const { error: deleteError } = await supabase
-          .from('forum_post_votes')
-          .delete()
-          .eq('post_id', id)
-          .eq('user_id', user.id);
-          
-        if (deleteError) {
-          console.error('Error removing vote:', deleteError);
-          return;
-        }
+        const updatedVotes = { ...post };
         
-        setUserVote(null);
-      } 
-      else {
-        // User is either voting for the first time or changing vote
-        if (userVote) {
-          // Changing vote
-          if (userVote === 'up') {
-            // From upvote to downvote
-            updatedVotes.upvotes = Math.max(0, post.upvotes - 1);
-            updatedVotes.downvotes = post.downvotes + 1;
-          } else {
-            // From downvote to upvote
-            updatedVotes.upvotes = post.upvotes + 1;
-            updatedVotes.downvotes = Math.max(0, post.downvotes - 1);
-          }
-          
-          // Update vote type
-          const { error: updateError } = await supabase
-            .from('forum_post_votes')
-            .update({ vote_type: voteType })
-            .eq('post_id', id)
-            .eq('user_id', user.id);
+        // If user already voted the same way, remove the vote
+        if (userVote === voteType) {
+            if (voteType === 'up') {
+                updatedVotes.upvotes = Math.max(0, post.upvotes - 1);
+            } else {
+                updatedVotes.downvotes = Math.max(0, post.downvotes - 1);
+            }
             
-          if (updateError) {
-            console.error('Error updating vote:', updateError);
-            return;
-          }
+            // Remove vote from database
+            const { error: deleteError } = await supabase
+                .from('forum_post_votes')
+                .delete()
+                .eq('post_id', id as string)
+                .eq('user_id', user?.id);
+                
+            if (deleteError) {
+                console.error('Error removing vote:', deleteError);
+                return;
+            }
+            
+            setUserVote(null);
         } 
         else {
-          // First time voting
-          if (voteType === 'up') {
-            updatedVotes.upvotes = post.upvotes + 1;
-          } else {
-            updatedVotes.downvotes = post.downvotes + 1;
-          }
-          
-          // Insert new vote
-          const { error: insertError } = await supabase
-            .from('forum_post_votes')
-            .insert({ 
-              post_id: id, 
-              user_id: user.id, 
-              vote_type: voteType 
-            });
+            // User is either voting for the first time or changing vote
+            if (userVote) {
+                // Changing vote
+                if (userVote === 'up') {
+                    // From upvote to downvote
+                    updatedVotes.upvotes = Math.max(0, post.upvotes - 1);
+                    updatedVotes.downvotes = post.downvotes + 1;
+                } else {
+                    // From downvote to upvote
+                    updatedVotes.upvotes = post.upvotes + 1;
+                    updatedVotes.downvotes = Math.max(0, post.downvotes - 1);
+                }
+                
+                // Update vote type
+                const { error: updateError } = await supabase
+                    .from('forum_post_votes')
+                    .update({ vote_type: voteType })
+                    .eq('post_id', id as string)
+                    .eq('user_id', user?.id);
+                    
+                if (updateError) {
+                    console.error('Error updating vote:', updateError);
+                    return;
+                }
+            } 
+            else {
+                // First time voting
+                if (voteType === 'up') {
+                    updatedVotes.upvotes = post.upvotes + 1;
+                } else {
+                    updatedVotes.downvotes = post.downvotes + 1;
+                }
+                
+                // Insert new vote
+                const { error: insertError } = await supabase
+                    .from('forum_post_votes')
+                    .insert({ 
+                        post_id: id as string, 
+                        user_id: user?.id, 
+                        vote_type: voteType 
+                    } as VoteData);
+                    
+                if (insertError) {
+                    console.error('Error inserting vote:', insertError);
+                    return;
+                }
+            }
             
-          if (insertError) {
-            console.error('Error inserting vote:', insertError);
-            return;
-          }
+            setUserVote(voteType);
         }
         
-        setUserVote(voteType);
-      }
-      
-      // Update post in database
-      const voteData = {
-        upvotes: updatedVotes.upvotes,
-        downvotes: updatedVotes.downvotes
-      };
-      
-      const { error } = await supabase
-        .from('forum_posts')
-        .update(voteData)
-        .eq('id', id);
+        // Update post in database
+        const voteData: { upvotes: number; downvotes: number } = {
+            upvotes: updatedVotes.upvotes,
+            downvotes: updatedVotes.downvotes
+        };
         
-      if (error) {
-        console.error('Error updating post votes:', error);
-        return;
-      }
-      
-      // Update local state
-      setPost(updatedVotes);
-      
+        const { error } = await supabase
+            .from('forum_posts')
+            .update(voteData)
+            .eq('id', id as string);
+            
+        if (error) {
+            console.error('Error updating post votes:', error);
+            return;
+        }
+        
+        // Update local state
+        setPost(updatedVotes);
+        
     } catch (error) {
-      console.error('Unexpected error during voting:', error);
+        console.error('Unexpected error during voting:', error);
     }
-  };
+};
 
   // Handle reply submission
   const handleSubmitReply = async () => {
@@ -270,8 +306,8 @@ export default function PostDetail() {
       const replyData = {
         post_id: id,
         content: newReply,
-        user_id: user.id,
-        username: user.user_metadata?.name || user.email?.split('@')[0] || 'Anonymous'
+        user_id: user?.id,
+        username: user?.user_metadata?.name || user?.email?.split('@')[0] || 'Anonymous'
       };
       
       // Insert reply
@@ -298,17 +334,317 @@ export default function PostDetail() {
     }
   };
 
+  // Handle nested reply submission
+const handleSubmitNestedReply = async (parentId: string) => {
+  try {
+    if (!checkAuth()) return;
+    
+    const content = replyText[parentId];
+    if (!content || !content.trim()) return;
+    
+    setSubmittingNestedReply(prev => ({ ...prev, [parentId]: true }));
+    
+    // Create nested reply object
+    const replyData = {
+      post_id: id,
+      content: content,
+      user_id: user?.id,
+      username: user?.user_metadata?.name || user?.email?.split('@')[0] || 'Anonymous',
+      parent_id: parentId
+    };
+    
+    // Insert nested reply
+    const { data, error } = await supabase
+      .from('forum_replies')
+      .insert([replyData])
+      .select();
+      
+    if (error) {
+      console.error('Error creating nested reply:', error);
+      return;
+    }
+    
+    // Update local state with the new nested reply
+    setReplies(current => {
+      const updatedReplies = [...current];
+      // Add the new reply to the list
+      updatedReplies.push(data[0]);
+      return updatedReplies;
+    });
+    
+    // Clear reply text and close the reply form
+    setReplyText(prev => ({ ...prev, [parentId]: '' }));
+    setReplyingTo(null);
+    
+  } catch (error) {
+    console.error('Unexpected error during nested reply submission:', error);
+  } finally {
+    setSubmittingNestedReply(prev => ({ ...prev, [parentId]: false }));
+  }
+};
+
+// Function to organize replies into a hierarchical structure
+const organizeReplies = (allReplies: Reply[]): Reply[] => {
+  const topLevelReplies: Reply[] = [];
+  const replyMap: Record<string, Reply> = {};
+  
+  // First pass: create a map of all replies and identify top-level replies
+  allReplies.forEach(reply => {
+    // Create a copy with empty replies array
+    const replyWithChildren = { ...reply, replies: [] };
+    replyMap[reply.id] = replyWithChildren;
+    
+    if (!reply.parent_id) {
+      topLevelReplies.push(replyWithChildren);
+    }
+  });
+  
+  // Second pass: build the hierarchy
+  allReplies.forEach(reply => {
+    if (reply.parent_id && replyMap[reply.parent_id]) {
+      replyMap[reply.parent_id].replies!.push(replyMap[reply.id]);
+    }
+  });
+  
+  return topLevelReplies;
+};
+
+// Update the ReplyCard component to reduce empty space and improve nested replies display
+const ReplyCard = ({ reply, depth = 0, parentExpanded = true }: { 
+  reply: Reply; 
+  depth?: number;
+  parentExpanded?: boolean;
+}) => {
+  const [localReplyText, setLocalReplyText] = useState("");
+  const [isReplying, setIsReplying] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(depth > 1);
+  
+  const hasReplies = reply.replies && reply.replies.length > 0;
+
+  const handleLocalReply = async () => {
+    // ...existing code...
+  };
+
+  // Optimize indentation - make it narrower to reduce empty space
+  const indentWidth = depth > 0 ? 
+    `${Math.min(24, depth * 12)}px` : 
+    '0px';
+
+  // If parent is not expanded, don't render this reply
+  if (!parentExpanded) return null;
+
+  return (
+    <div style={{ 
+      marginBottom: depth === 0 ? "12px" : "6px", // Less spacing between nested replies
+      display: 'flex',
+      width: '100%'
+    }}>
+      {/* Vertical threading line - thinner and more subtle */}
+      {depth > 0 && (
+        <div style={{
+          width: indentWidth,
+          position: 'relative'
+        }}>
+          <div style={{
+            position: 'absolute',
+            left: '0',
+            top: '0',
+            bottom: '0',
+            width: '2px',
+            backgroundColor: '#e0e0e0',
+            marginLeft: depth > 1 ? `${Math.min(12, (depth-1) * 12)}px` : '0px'
+          }} />
+        </div>
+      )}
+
+      {/* Comment content - more compact for nested replies */}
+      <div style={{ 
+        flexGrow: 1,
+        backgroundColor: '#ffffff', 
+        borderRadius: depth > 0 ? '4px' : '6px', // Smaller radii
+        padding: depth > 0 ? '8px 12px' : '12px 16px',
+        border: depth > 0 ? '1px solid #f0f0f0' : '1px solid #eeeeee',
+        boxShadow: depth === 0 ? '0px 2px 4px rgba(0,0,0,0.05)' : 'none',
+        marginLeft: '4px', // Small gap between threading line and content
+      }}>
+        {/* User info and timestamp - more compact for nested replies */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: depth > 0 ? '4px' : '8px' // Less margin for nested
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            {/* Collapse toggle button */}
+            {hasReplies && (
+              <div 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsCollapsed(!isCollapsed);
+                }}
+                style={{
+                  cursor: 'pointer',
+                  marginRight: '6px', // Reduced margin
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '2px', // Smaller padding
+                  borderRadius: '50%',
+                }}
+                title={isCollapsed ? "Expand replies" : "Collapse replies"}
+              >
+                {isCollapsed ? 
+                  <IconChevronRight size={16} style={{ color: '#666' }} /> : 
+                  <IconChevronDown size={16} style={{ color: '#666' }} />
+                }
+              </div>
+            )}
+            <IconUser style={{ 
+              color: '#3f6cd4', 
+              width: '16px',
+              height: '16px',
+              marginRight: '4px' // Reduced margin
+            }} />
+            <div>
+              <Text fw={600} size={depth > 0 ? "xs" : "sm"} style={{ lineHeight: 1.2 }}>
+                {reply.username || "Anonymous"}
+              </Text>
+              <Text size="xs" color="dimmed">
+                {formatDate(reply.created_at)}
+              </Text>
+            </div>
+          </div>
+          
+          {/* Reply count - smaller for nested replies */}
+          {hasReplies && (
+            <Text size="xs" color="dimmed" style={{ fontSize: depth > 0 ? '11px' : '12px' }}>
+              {reply.replies?.length} {reply.replies?.length === 1 ? 'reply' : 'replies'}
+            </Text>
+          )}
+        </div>
+        
+        {/* Comment content - font size based on depth */}
+        <Text size={depth > 0 ? "xs" : "sm"} style={{ 
+          lineHeight: depth > 0 ? 1.5 : 1.6,
+          marginBottom: depth > 0 ? '6px' : '10px',
+          color: '#333333'
+        }}>
+          {reply.content}
+        </Text>
+        
+        {/* Action buttons row - more compact */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          {/* Reply button */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {user && (
+              <Button
+                variant="subtle"
+                size="xs"
+                compact={depth > 0} // More compact for nested
+                onClick={() => setIsReplying(!isReplying)}
+                style={{ 
+                  padding: depth > 0 ? '0 6px' : '0 8px', 
+                  height: depth > 0 ? '24px' : '28px', 
+                  color: '#3f6cd4',
+                  fontWeight: 500,
+                  fontSize: depth > 0 ? '12px' : '13px'
+                }}
+              >
+                {isReplying ? "Cancel" : "Reply"}
+              </Button>
+            )}
+          </div>
+        </div>
+        
+        {/* Reply form - more compact for nested replies */}
+        {isReplying && (
+          <div style={{ 
+            marginTop: depth > 0 ? '8px' : '12px',
+            padding: depth > 0 ? '6px' : '8px',
+            backgroundColor: '#f9f9f9',
+            borderRadius: '6px'
+          }}>
+            <Textarea
+              placeholder="Write your reply..."
+              minRows={2}
+              autosize
+              maxRows={depth > 0 ? 4 : 6}
+              value={localReplyText}
+              onChange={(e) => setLocalReplyText(e.currentTarget.value)}
+              autoFocus
+              style={{ 
+                marginBottom: depth > 0 ? '6px' : '8px', 
+                fontSize: depth > 0 ? '13px' : '14px' 
+              }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Button
+                size={depth > 0 ? "xs" : "sm"}
+                compact={depth > 0}
+                leftSection={<IconSend size={depth > 0 ? 14 : 16} />}
+                onClick={handleLocalReply}
+                loading={isSubmitting}
+                disabled={!localReplyText.trim()}
+                style={{ backgroundColor: '#3f6cd4' }}
+              >
+                Reply
+              </Button>
+            </div>
+          </div>
+        )}
+        
+        {/* Nested replies - only show direct children, keep their nested replies collapsed */}
+        {!isCollapsed && hasReplies && (
+          <div style={{ 
+            marginTop: depth > 0 ? '6px' : '10px',
+            marginLeft: depth > 0 ? '-2px' : '0' // Pull nested replies slightly to the left to reduce empty space
+          }}>
+            {reply.replies?.map(nestedReply => (
+              <ReplyCard 
+                key={nestedReply.id} 
+                reply={nestedReply} 
+                depth={depth + 1} 
+                parentExpanded={true}
+              />
+            ))}
+          </div>
+        )}
+        
+        {/* Collapsed indicator - show when collapsed and has replies */}
+        {isCollapsed && hasReplies && (
+          <div 
+            style={{ 
+              marginTop: '6px',
+              padding: '6px', 
+              backgroundColor: '#f5f5f5',
+              borderRadius: '4px',
+              textAlign: 'center',
+              cursor: 'pointer',
+              fontSize: depth > 0 ? '11px' : '12px'
+            }}
+            onClick={() => setIsCollapsed(false)}
+          >
+            <Text size="xs" color="dimmed">
+              {reply.replies?.length} hidden {reply.replies?.length === 1 ? 'reply' : 'replies'} - Click to expand
+            </Text>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
   // Format date
-  const formatDate = (dateString) => {
+const formatDate = (dateString: string | undefined): string => {
     if (!dateString) return "Recently";
     return new Date(dateString).toLocaleString();
-  };
+};
 
   if (loading) {
     return (
       <Stack justify="flex-start" gap={0} className={styles.container}>
         <SimpleGrid className={styles.header} cols={2}>
-          <ArrowBack 
+          <IconArrowLeft 
             style={{ scale: "1.75", color: "white", cursor: "pointer" }} 
             onClick={goBack}
           />
@@ -326,7 +662,7 @@ export default function PostDetail() {
     return (
       <Stack justify="flex-start" gap={0} className={styles.container}>
         <SimpleGrid className={styles.header} cols={2}>
-          <ArrowBack 
+          <IconArrowLeft 
             style={{ scale: "1.75", color: "white", cursor: "pointer" }} 
             onClick={goBack}
           />
@@ -344,7 +680,7 @@ export default function PostDetail() {
   return (
     <Stack justify="flex-start" gap={0} className={styles.container}>
       <SimpleGrid className={styles.header} cols={2}>
-        <ArrowBack 
+        <IconArrowLeft 
           style={{ scale: "1.75", color: "white", cursor: "pointer" }} 
           onClick={goBack}
         />
@@ -364,9 +700,9 @@ export default function PostDetail() {
           </BreadcrumbList>
         </Breadcrumb>
         {user ? (
-          <Group position="right">
+          <Group justify="right">
             <Text color="white" size="sm">{user.user_metadata?.name || user.email?.split('@')[0]}</Text>
-            <AccountCircle style={{ scale: "1.75", color: "white" }} />
+            <IconUser style={{ scale: "1.75", color: "white" }} />
           </Group>
         ) : (
           <Button 
@@ -374,116 +710,168 @@ export default function PostDetail() {
             color="white"
             onClick={() => setLoginModalOpen(true)}
           >
-            <AccountCircle style={{ scale: "1.75", color: "white" }} />
+            <IconUser style={{ scale: "1.75", color: "white" }} />
           </Button>
         )}
       </SimpleGrid>
       
-      <Group style={{ ...bottomStyles, position: 'relative' }}>
+      <div style={{ ...bottomStyles, position: 'relative', padding: '0', width: '100%' }}>
         <ScrollArea
-          style={{ height: "calc(100vh - 70px)", width: "100%", maxWidth: "800px", margin: "auto" }}
+          style={{ height: "calc(100vh - 70px)", width: "100%" }}
           scrollbarSize={8}
+          type="hover"
         >
-          <Stack spacing="md" p="md">
-            {/* Post card */}
-            <Card 
-              shadow="sm" 
-              padding="lg" 
-              radius="md" 
-              withBorder
-              style={{ marginBottom: "1rem" }}
-            >
-              <Stack spacing="md">
-                <Group position="apart">
-                  <Text size="xl" weight={500}>{post.title}</Text>
-                  <Text size="xs" color="gray">{formatDate(post.created_at)}</Text>
-                </Group>
-                <Text size="sm" color="gray">Posted by {post.username || "Anonymous"}</Text>
-                {post.image && (
-                  <Image src={post.image} height={300} radius="md" alt="Post Image" />
-                )}
-                <Text size="md">{post.content}</Text>
-                <Divider />
-                <Group spacing="lg">
-                  <Button 
-                    variant={userVote === 'up' ? "filled" : "subtle"}
-                    leftSection={<ArrowUpward />}
-                    onClick={() => handleVote('up')}
-                    style={userVote === 'up' ? { backgroundColor: '#4CAF50', color: 'white' } : {}}
-                  >
-                    {post.upvotes || 0}
-                  </Button>
-                  <Button 
-                    variant={userVote === 'down' ? "filled" : "subtle"}
-                    leftSection={<ArrowDownward />}
-                    onClick={() => handleVote('down')}
-                    style={userVote === 'down' ? { backgroundColor: '#F44336', color: 'white' } : {}}
-                  >
-                    {post.downvotes || 0}
-                  </Button>
-                  <Text>{replies.length} {replies.length === 1 ? 'Reply' : 'Replies'}</Text>
-                </Group>
-              </Stack>
-            </Card>
-            
-            {/* Reply input */}
-            <Card shadow="sm" padding="md" radius="md" withBorder>
-              <Stack spacing="sm">
-                <Text weight={500}>Add a Reply</Text>
-                <Textarea
-                  placeholder="Write your reply here..."
-                  minRows={3}
-                  value={newReply}
-                  onChange={(e) => setNewReply(e.target.value)}
-                  disabled={!user}
-                />
-                <Group position="right">
-                  <Button
-                    leftSection={<Send />}
-                    onClick={handleSubmitReply}
-                    loading={submittingReply}
-                    disabled={!user || !newReply.trim()}
-                    style={{ backgroundColor: '#3f6cd4' }}
-                  >
-                    Post Reply
-                  </Button>
-                </Group>
-                {!user && (
-                  <Text size="sm" color="dimmed" align="center">
-                    Please <Button variant="subtle" compact onClick={() => setLoginModalOpen(true)}>sign in</Button> to reply.
+          <div style={{ 
+            maxWidth: '1200px', 
+            margin: '0 auto', 
+            padding: '1rem',
+            width: '100%'
+          }}>
+            <Stack gap="md" style={{ width: '100%' }}>
+              {/* Post header section - more mobile friendly */}
+              <Card 
+                shadow="sm" 
+                padding={{ base: "md", sm: "lg" }} // Responsive padding
+                radius="sm" // Changed from "md" to "sm"
+                withBorder
+              >
+                <Stack gap="md">
+                  <Group justify="space-between" wrap="wrap">
+                    <Text size="xl" fw={700} style={{ 
+                      fontSize: 'min(24px, 5.5vw)',
+                      wordBreak: 'break-word'
+                    }}>
+                      {post.title}
+                    </Text>
+                    <Text size="xs" color="dimmed">{formatDate(post.created_at)}</Text>
+                  </Group>
+                  <Group spacing="xs">
+                    <IconUser style={{ color: '#3f6cd4' }} />
+                    <Text size="sm" fw={500}>{post.username || "Anonymous"}</Text>
+                  </Group>
+                  
+                  {post.image && (
+                    <div style={{ 
+                      width: '100%', 
+                      maxHeight: '50vh', // Viewport-based height for mobile
+                      overflow: 'hidden', 
+                      borderRadius: '8px',
+                      margin: '0.5rem 0'
+                    }}>
+                      <Image 
+                        src={post.image} 
+                        height={300} 
+                        fit="cover"
+                        radius="md" 
+                        alt="Post Image" 
+                      />
+                    </div>
+                  )}
+                  
+                  <Text size="md" style={{ 
+                    lineHeight: 1.7,
+                    fontSize: 'min(16px, 4.2vw)', // Responsive font size
+                    overflowWrap: 'break-word',
+                    wordBreak: 'break-word'
+                  }}>
+                    {post.content}
                   </Text>
-                )}
-              </Stack>
-            </Card>
-            
-            {/* Replies section */}
-            <Text weight={500} size="lg" mt="lg">Replies</Text>
-            {replies.length > 0 ? (
-              replies.map((reply) => (
-                <Card 
-                  key={reply.id} 
-                  shadow="sm" 
-                  padding="md" 
-                  radius="md" 
-                  withBorder
-                >
-                  <Stack spacing="xs">
-                    <Group position="apart">
-                      <Text weight={500}>{reply.username || "Anonymous"}</Text>
-                      <Text size="xs" color="gray">{formatDate(reply.created_at)}</Text>
+                  
+                  <Divider />
+                  
+                  {/* Vote buttons - more compact on mobile */}
+                  <Group position="apart" wrap="wrap">
+                    <Group gap="xs">
+                      <Button 
+                        variant={userVote === 'up' ? "filled" : "subtle"}
+                        leftSection={<IconArrowUp size={16} />}
+                        onClick={() => handleVote('up')}
+                        style={userVote === 'up' ? { backgroundColor: '#4CAF50', color: 'white' } : {}}
+                        size="xs"
+                        compact
+                      >
+                        {(post?.upvotes ?? 0).toLocaleString()}
+                      </Button>
+                      <Button 
+                        variant={userVote === 'down' ? "filled" : "subtle"}
+                        leftSection={<IconArrowDown style={{ fontSize: 'min(16px, 4vw)' }} />}
+                        onClick={() => handleVote('down')}
+                        style={userVote === 'down' ? { backgroundColor: '#F44336', color: 'white' } : {}}
+                        size="xs"
+                        compact
+                      >
+                        {post.downvotes || 0}
+                      </Button>
                     </Group>
-                    <Text>{reply.content}</Text>
+                  </Group>
+                </Stack>
+              </Card>
+              
+              {/* Responsive layout for discussion */}
+              <div style={{ width: '100%' }}>
+                {/* Reply form section */}
+                <Card shadow="sm" padding="md" radius="sm" withBorder style={{ marginBottom: '1rem' }}>
+                  <Stack gap="sm">
+                    <Text fw={600} size="md">Add a Reply</Text>
+                    <Textarea
+                      placeholder="Share your thoughts..."
+                      minRows={5}
+                      value={newReply}
+                      onChange={(e) => setNewReply(e.target.value)}
+                      disabled={!user}
+                    />
+                    <Group justify="space-between">
+                      {!user && (
+                        <Button variant="outline" onClick={() => setLoginModalOpen(true)} size="sm">
+                          Sign in to participate
+                        </Button>
+                      )}
+                      <Button
+                        leftSection={<IconSend />}
+                        onClick={handleSubmitReply}
+                        loading={submittingReply}
+                        disabled={!user || !newReply.trim()}
+                        style={{ backgroundColor: '#3f6cd4' }}
+                        ml="auto"
+                      >
+                        Post Reply
+                      </Button>
+                    </Group>
                   </Stack>
                 </Card>
-              ))
-            ) : (
-              <Card shadow="sm" padding="xl" radius="md" withBorder>
-                <Text align="center" color="dimmed">No replies yet. Be the first to reply!</Text>
-              </Card>
-            )}
-          </Stack>
+                
+                {/* Replies section */}
+                <div>
+                  <Group justify="space-between" mb="md">
+                    <Text fw={600} size="lg">Discussion</Text>
+                    <Text fw={500} size="sm" color="dimmed">{replies.length} {replies.length === 1 ? 'Reply' : 'Replies'}</Text>
+                  </Group>
+                  
+                  {replies.length > 0 ? (
+                    <Stack gap="md">
+                      {organizeReplies(replies).map((reply) => (
+                        <ReplyCard 
+                          key={reply.id} 
+                          reply={reply} 
+                          depth={0} 
+                          parentExpanded={true} // Top level replies are always visible
+                        />
+                      ))}
+                    </Stack>
+                  ) : (
+                    <Card shadow="sm" padding="md" radius="sm" withBorder>
+                      <Stack align="center" spacing="md" py="lg">
+                        <Text align="center" color="dimmed">No replies yet.</Text>
+                        <Text align="center" size="sm">Be the first to share your thoughts!</Text>
+                      </Stack>
+                    </Card>
+                  )}
+                </div>
+              </div>
+            </Stack>
+          </div>
         </ScrollArea>
-      </Group>
+      </div>
       
       {/* Login Modal */}
       <Modal
@@ -492,7 +880,7 @@ export default function PostDetail() {
         title="Sign In Required"
         size="sm"
       >
-        <Stack spacing="md">
+        <Stack gap="md">
           <Text>Please sign in to continue.</Text>
           <Button
             onClick={handleGoogleLogin}

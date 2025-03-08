@@ -22,6 +22,8 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { LocalLaundryService, Restaurant } from "@material-ui/icons";
 import GoogleIcon from '@mui/icons-material/Google';
+import { useRouter } from 'next/router';
+import supabase from '@/utils/supabase/client';
 
 const carouselItems = [
   {
@@ -40,6 +42,21 @@ export default function IndexPage() {
   const plugin = React.useRef(
     Autoplay({ delay: 5000, stopOnInteraction: true })
   );
+  const router = useRouter();
+  console.log( process.env.NEXT_PUBLIC_SUPABASE_URL)
+  const handleGoogleLogin = async () => {
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+      });
+      
+      if (error) {
+        console.error('Error logging in with Google:', error.message);
+      }
+    } catch (error) {
+      console.error('Unexpected error during login:', error);
+    }
+  };
 
   return (
     <Stack justify="flex-start" gap={0} className={styles.container}>
@@ -48,7 +65,7 @@ export default function IndexPage() {
       </SimpleGrid> */}
 
       <Group style={{ display: "flex", flexDirection: "row", justifyContent: "center", alignItems: "center", height: "100vh", position: "relative", backgroundColor: "#fff" }}>
-        <Text style={{ fontSize: "3rem", fontWeight: "bold"}}>App Name</Text>
+        <Text style={{ fontSize: "3rem", fontWeight: "bold"}}>Unidorm</Text>
         <Group style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100%", position: "relative", backgroundColor: "#fff" }}>
             <Carousel
             plugins={[plugin.current]}
@@ -95,6 +112,7 @@ export default function IndexPage() {
             </Carousel>
 
             <UnstyledButton
+            onClick={handleGoogleLogin}
             style={{
             backgroundColor: "#000",
             color: "#fff",

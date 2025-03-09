@@ -116,7 +116,7 @@ function AdminPage() {
           
           <UnstyledButton 
             className={styles.button} 
-            onClick={() => router.push("/Admin/Announcements")}
+            onClick={() => router.push("/Admin/MakeAnnouncement")}
             style={{
               backgroundColor: 'white',
               padding: '1.5rem',

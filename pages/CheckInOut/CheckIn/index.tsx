@@ -23,8 +23,6 @@ import {
 import { format } from "date-fns"
 import { TimeInput } from '@mantine/dates';
 import { IconClock } from '@tabler/icons-react';
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 
 export default function IndexPage() {
   const [focusedName, setFocused] = useState(false);

@@ -714,7 +714,7 @@ const formatDate = (dateString: string | undefined): string => {
           <div />
         </SimpleGrid>
         <Group style={bottomStyles}>
-          <Text align="center" py="xl" size="lg">Loading post...</Text>
+          <Text ta="center" py="xl" size="lg">Loading post...</Text>
         </Group>
       </Stack>
     );
@@ -732,7 +732,7 @@ const formatDate = (dateString: string | undefined): string => {
           <div />
         </SimpleGrid>
         <Group style={bottomStyles}>
-          <Text align="center" py="xl" size="lg">Post not found</Text>
+          <Text ta="center" py="xl" size="lg">Post not found</Text>
           <Button onClick={goBack}>Return to Forums</Button>
         </Group>
       </Stack>
@@ -793,7 +793,7 @@ const formatDate = (dateString: string | undefined): string => {
               {/* Post header section - more mobile friendly */}
               <Card 
                 shadow="sm" 
-                padding={{ base: "md", sm: "lg" }} // Responsive padding
+                padding="md" // Fixed padding
                 radius="sm" // Changed from "md" to "sm"
                 withBorder
               >
@@ -844,7 +844,7 @@ const formatDate = (dateString: string | undefined): string => {
                         <Button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setExpandedImage(expandedImage === post.image ? null : post.image);
+                            setExpandedImage(expandedImage === post.image ? null : post.image || null);
                           }}
                           size="sm"
                           variant="light"
@@ -955,9 +955,9 @@ const formatDate = (dateString: string | undefined): string => {
                     </Stack>
                   ) : (
                     <Card shadow="sm" padding="md" radius="sm" withBorder>
-                      <Stack align="center" spacing="md" py="lg">
-                        <Text align="center" color="dimmed">No replies yet.</Text>
-                        <Text align="center" size="sm">Be the first to share your thoughts!</Text>
+                      <Stack align="center" gap="md" py="lg">
+                        <Text ta="center" color="dimmed">No replies yet.</Text>
+                        <Text ta="center" size="sm">Be the first to share your thoughts!</Text>
                       </Stack>
                     </Card>
                   )}
@@ -1010,7 +1010,7 @@ const formatDate = (dateString: string | undefined): string => {
             </svg>
             Sign in with Google
           </Button>
-          <Text size="sm" color="dimmed" align="center" mt="sm">
+          <Text size="sm" color="dimmed" ta="center" mt="sm">
             You need to be signed in to reply and vote.
           </Text>
         </Stack>

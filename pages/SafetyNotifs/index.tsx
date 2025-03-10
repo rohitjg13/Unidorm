@@ -57,8 +57,8 @@ export default function IndexPage() {
 
       <Group className={styles.bottom}>
         {notifications.map((notif, index) => (
-            <Box>
-                <Box key={index} style={{ width: "90vw", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <Box key={index}>
+                <Box style={{ width: "90vw", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <Stack justify="flex-start" style={{ width: "10%", display: "flex", alignItems: "center" }} gap="0">
                         <Text style={{fontFamily: "monospace", fontSize: "1.5rem", fontWeight: "bold", color: "black"}}>
                         {notif.day}
@@ -87,7 +87,7 @@ export default function IndexPage() {
         ))}
       </Group>
       <Box style={{ position: "fixed", bottom: 0, width: "100vw"}}>
-              <Image src="../../images/vector.svg" radius="md" style={{ width: "100%", margin: 0 }} />
+              <Image src="../../images/vector.svg" radius="md" style={{ width: "100%", margin: 0 }} alt="" />
       </Box>
     </Stack>
   );

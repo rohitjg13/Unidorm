@@ -330,11 +330,11 @@ export default function MaintenanceStudent() {
         {loadingHistory ? (
           <Loader style={{ margin: "2rem auto", display: "block" }} />
         ) : userRequests.length > 0 ? (
-          <Stack spacing="md">
+          <Stack gap="md">
             {userRequests.map(request => (
               <Card key={request.id} shadow="sm" padding="md" radius="md" withBorder>
                 <Stack>
-                  <Group position="apart">
+                  <Group justify="apart">
                     <Text fw={600}>Room: {request.wing} Wing, Floor {request.floor}, Room {request.room_number}</Text>
                     <Badge color={getStatusColor(request.status)}>{request.status}</Badge>
                   </Group>
@@ -345,12 +345,12 @@ export default function MaintenanceStudent() {
             ))}
           </Stack>
         ) : (
-          <Text align="center" py="xl">You haven't submitted any maintenance requests yet.</Text>
+          <Text ta="center" py="xl">You haven&apos;t submitted any maintenance requests yet.</Text>
         )}
       </Modal>
       
       <Box className={styles.vectorBackground}>
-        <Image src="../../images/vector.svg" radius="md" style={{ width: "100%", margin: 0 }} />
+        <Image src="../../images/vector.svg" radius="md" style={{ width: "100%", margin: 0 }} alt="" />
       </Box>
     </Stack>
   );

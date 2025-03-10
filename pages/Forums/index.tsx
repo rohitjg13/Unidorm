@@ -18,7 +18,10 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 import supabase from "@/utils/supabase/client";
-import { v4 as uuidv4 } from 'uuid'; // You'll need to install this package: npm install uuid
+import { v4 as uuidv4 } from 'uuid';
+import { User } from '@supabase/supabase-js'; 
+
+const initialForumPosts: ForumPost[] = []; // Empty array as fallback data
 
 const bottomStyles = {
   backgroundColor: '#fff',
@@ -39,9 +42,22 @@ const bottomStyles = {
   boxShadow: '0px 0px 10px 0px rgba(0, 0, 0, 0.1)',
 };
 
+interface ForumPost {
+  id: string;
+  title: string;
+  content: string;
+  image?: string;
+  created_at?: string;
+  upvotes?: number;
+  downvotes?: number;
+  username?: string;
+  replies_count?: number;
+}
+
 export default function Forum() {
   const router = useRouter();
-  const [forumPosts, setForumPosts] = useState([]);
+
+  const [forumPosts, setForumPosts] = useState<ForumPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [newPostModalOpen, setNewPostModalOpen] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
@@ -51,7 +67,8 @@ export default function Forum() {
     image: null,
     imagePreview: null
   });
-  const [user, setUser] = useState(null);
+  
+  const [user, setUser] = useState<User | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [userVotes, setUserVotes] = useState({});
   const [initialVotesLoaded, setInitialVotesLoaded] = useState(false);
@@ -580,12 +597,12 @@ export default function Forum() {
                 scrollbarSize={0}
               >
                 {loading ? (
-                  <Text align="center" py="xl">Loading posts...</Text>
+                  <Text ta="center" py="xl">Loading posts...</Text>
                 ) : (
-                  <Stack spacing="md">
+                  <Stack gap="md">
                     {forumPosts.length > 0 ? 
                       forumPosts.map(renderPostCard) : 
-                      <Text align="center" py="xl">No posts yet. Be the first to post!</Text>
+                      <Text ta="center" py="xl">No posts yet. Be the first to post!</Text>
                     }
                   </Stack>
                 )}
@@ -609,15 +626,15 @@ export default function Forum() {
                 scrollbarSize={0}
               >
                 {loading ? (
-                  <Text align="center" py="xl">Loading posts...</Text>
+                  <Text ta="center" py="xl">Loading posts...</Text>
                 ) : (
-                  <Stack spacing="md">
+                  <Stack gap="md">
                     {forumPosts.length > 0 ? 
                       getFilteredPosts(forumPosts, trendingTimePeriod).map(renderPostCard) : 
-                      <Text align="center" py="xl">No posts yet. Be the first to post!</Text>
+                      <Text ta="center" py="xl">No posts yet. Be the first to post!</Text>
                     }
                     {getFilteredPosts(forumPosts, trendingTimePeriod).length === 0 && forumPosts.length > 0 && (
-                      <Text align="center" py="xl">No posts for this time period. Try another filter.</Text>
+                      <Text ta="center" py="xl">No posts for this time period. Try another filter.</Text>
                     )}
                   </Stack>
                 )}
@@ -776,7 +793,7 @@ export default function Forum() {
             </svg>
             Sign in with Google
           </Button>
-          <Text size="sm" color="dimmed" align="center" mt="sm">
+          <Text size="sm" color="dimmed" ta="center" mt="sm">
             You need to be signed in to create posts and vote.
           </Text>
         </Stack>
@@ -786,7 +803,11 @@ export default function Forum() {
 }
 
 // Function to handle image upload to Supabase Storage - FIXED
-const uploadImage = async (file) => {
+interface UploadImageResponse {
+  publicUrl: string | null;
+}
+
+const uploadImage = async (file: File | null): Promise<string | null> => {
   try {
     if (!file) return null;
     
@@ -820,13 +841,11 @@ const uploadImage = async (file) => {
     }
 
     // Get the public URL for the uploaded image
-    console.log(filePath);
     const { data } = supabase
       .storage
       .from('forum-images')
-      .getPublicUrl(filePath);
+      .getPublicUrl(filePath) as { data: UploadImageResponse };
 
-    console.log(data.publicUrl);
     console.log("Successfully uploaded image. URL:", data.publicUrl);
     return data.publicUrl;
   } catch (error) {

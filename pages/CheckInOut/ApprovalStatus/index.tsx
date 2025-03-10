@@ -76,7 +76,7 @@ export default function IndexPage() {
       ))}
       </Group>
       <Box style={{ position: "fixed", bottom: 0, width: "100vw"}}>
-              <Image src="../../images/vector.svg" radius="md" style={{ width: "100%", margin: 0 }} />
+              <Image src="../../images/vector.svg" radius="md" style={{ width: "100%", margin: 0 }} alt=""/>
       </Box>
     </Stack>
   );

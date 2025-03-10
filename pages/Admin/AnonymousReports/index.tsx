@@ -242,7 +242,7 @@ function AnonymousReportsAdmin() {
 
       <Group className={styles.bottom} style={{ position: 'relative', zIndex: 1 }}>
         <ScrollArea style={{ height: 'calc(100vh - 70px)', width: '100%', padding: '1rem' }}>
-          <Stack style={{ width: '90%', maxWidth: '1000px', margin: '0 auto' }} spacing="md">
+          <Stack style={{ width: '90%', maxWidth: '1000px', margin: '0 auto' }} gap="md">
             <Card shadow="sm" p="md" radius="md" withBorder>
               <Stack>
                 <Text fw={700} size="lg">Anonymous Reports</Text>
@@ -283,26 +283,26 @@ function AnonymousReportsAdmin() {
                   </Card>
                 ) : reportThreads.length === 0 ? (
                   <Card shadow="sm" p="xl" radius="md" withBorder>
-                    <Text align="center">No reports found in this category.</Text>
+                    <Text ta="center">No reports found in this category.</Text>
                   </Card>
                 ) : (
-                  <Stack spacing="lg">
+                  <Stack gap="lg">
                     {reportThreads.map(thread => (
                       <Card key={thread.id} shadow="sm" p="md" radius="md" withBorder>
                         <Stack>
-                          <Group position="apart">
-                            <Group spacing={6}>
+                          <Group justify="apart">
+                            <Group gap={6}>
                               <Text fw={600}>Report #{thread.id.substring(0, 8)}</Text>
                               <Text size="xs" c="dimmed">#{thread.anon_id.substring(0, 6)}</Text>
                             </Group>
-                            <Group spacing={6}>
+                            <Group gap={6}>
                               <Badge color={getStatusColor(thread.status)}>
                                 {thread.status}
                               </Badge>
                             </Group>
                           </Group>
                           
-                          <Group spacing={6}>
+                          <Group gap={6}>
                             <Text size="xs" fw={500}>Created:</Text>
                             <Text size="xs" c="dimmed">{formatDate(thread.created_at)}</Text>
                             {thread.created_at !== thread.updated_at && (
@@ -314,7 +314,7 @@ function AnonymousReportsAdmin() {
                           </Group>
                           
                           <Card withBorder padding="sm">
-                            <Stack spacing="md">
+                            <Stack gap="md">
                               {reportMessages[thread.id]?.map((message, index) => (
                                 <Group key={index} style={{ 
                                   alignItems: 'flex-start',
@@ -339,7 +339,7 @@ function AnonymousReportsAdmin() {
                           </Card>
                           
                           {/* Status Update Buttons - Clear separation from replying */}
-                          <Group position="center">
+                          <Group justify="center">
                             <Button
                               size="xs"
                               variant={thread.status === "Pending" ? "filled" : "outline"}
@@ -398,7 +398,7 @@ function AnonymousReportsAdmin() {
                                 disabled={submittingReply && replyingToThread === thread.id}
                               />
                               
-                              <Group position="right">
+                              <Group justify="right">
                                 <Text size="xs" c="dimmed" style={{ fontStyle: 'italic' }}>
                                   Replying does not change the status automatically
                                 </Text>
@@ -427,7 +427,7 @@ function AnonymousReportsAdmin() {
       </Group>
       
       <Box style={{ position: "fixed", bottom: 0, width: "100vw", zIndex: 0 }}>
-        <Image src="../../../images/vector.svg" radius="md" style={{ width: "100%", margin: 0 }} />
+        <Image src="../../../images/vector.svg" radius="md" style={{ width: "100%", margin: 0 }} alt="" />
       </Box>
     </Stack>
   );

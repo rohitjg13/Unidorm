@@ -58,7 +58,7 @@ function WorkerDetails() {
       </SimpleGrid>
 
       <Group className={styles.bottom} style={{ position: 'relative', zIndex: 1 }}>
-        <Stack style={{ width: '90%', maxWidth: '1000px', margin: '0 auto' }} spacing="md">
+        <Stack style={{ width: '90%', maxWidth: '1000px', margin: '0 auto' }} gap="md">
           {staffData.map((staff, index) => (
             <Stack 
               key={index}
@@ -89,7 +89,7 @@ function WorkerDetails() {
       </Group>
       
       <Box style={{ position: "fixed", bottom: 0, width: "100vw", zIndex: 0 }}>
-        <Image src="../../../images/vector.svg" radius="md" style={{ width: "100%", margin: 0 }} />
+        <Image src="../../../images/vector.svg" radius="md" style={{ width: "100%", margin: 0 }} alt=""/>
       </Box>
     </Stack>
   );

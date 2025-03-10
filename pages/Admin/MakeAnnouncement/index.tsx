@@ -229,7 +229,7 @@ function MakeAnnouncement() {
 
       <Group className={styles.bottom} style={{ position: 'relative', zIndex: 1 }}>
         <ScrollArea style={{ height: 'calc(100vh - 70px)', width: '100%', padding: '1rem' }}>
-          <Stack style={{ width: '90%', maxWidth: '1000px', margin: '0 auto' }} spacing="xl">
+          <Stack style={{ width: '90%', maxWidth: '1000px', margin: '0 auto' }} gap="xl">
             {/* Announcement Creation Form */}
             <Card shadow="sm" p="lg" radius="md" withBorder>
               <Stack>
@@ -263,7 +263,7 @@ function MakeAnnouncement() {
                   disabled={submitting}
                 />
                 
-                <Group position="apart">
+                <Group justify="apart">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <input 
                       type="checkbox" 
@@ -282,7 +282,7 @@ function MakeAnnouncement() {
                     onClick={postAnnouncement}
                     loading={submitting}
                     disabled={submitting}
-                    leftIcon={<Send fontSize="small" />}
+                    leftSection={<Send fontSize="small" />}
                   >
                     Post Announcement
                   </Button>
@@ -300,15 +300,15 @@ function MakeAnnouncement() {
                     <Loader color="blue" />
                   </div>
                 ) : announcements.length === 0 ? (
-                  <Text align="center" py="xl" c="dimmed">No announcements have been posted yet.</Text>
+                  <Text ta="center" py="xl" c="dimmed">No announcements have been posted yet.</Text>
                 ) : (
-                  <Stack spacing="md">
+                  <Stack gap="md">
                     {announcements.map(announcement => (
                       <Card key={announcement.id} shadow="sm" p="md" radius="md" withBorder>
                         <Stack>
-                          <Group position="apart">
+                          <Group justify="apart">
                             <div>
-                              <Group spacing="xs">
+                              <Group gap="xs">
                                 <Text fw={700}>{announcement.title}</Text>
                                 {announcement.urgent && (
                                   <Badge color="red">Urgent</Badge>
@@ -342,7 +342,7 @@ function MakeAnnouncement() {
       </Group>
       
       <Box style={{ position: "fixed", bottom: 0, width: "100vw", zIndex: 0 }}>
-        <Image src="../../../images/vector.svg" radius="md" style={{ width: "100%", margin: 0 }} />
+        <Image src="../../../images/vector.svg" radius="md" style={{ width: "100%", margin: 0 }} alt=""/>
       </Box>
     </Stack>
   );

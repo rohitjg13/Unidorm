@@ -126,15 +126,15 @@ export default function Announcements() {
 
       <Group className={styles.bottom} style={{ position: 'relative', zIndex: 1 }}>
         <ScrollArea style={{ height: 'calc(100vh - 70px)', width: '100%', padding: '1rem' }}>
-          <Stack style={{ width: '90%', maxWidth: '800px', margin: '0 auto' }} spacing="md">
+          <Stack style={{ width: '90%', maxWidth: '800px', margin: '0 auto' }} gap="md">
             <Card shadow="sm" p="md" radius="md" withBorder>
-              <Group position="apart">
+              <Group justify="apart">
                 <Group>
                   <Notifications style={{ color: "#3f6cd4" }} />
                   <Text fw={700} size="lg">Announcements</Text>
                 </Group>
                 {announcements.filter(a => a.urgent).length > 0 && (
-                  <Group spacing="xs">
+                  <Group gap="xs">
                     <ErrorOutline style={{ color: "red", fontSize: 18 }} />
                     <Text size="sm" c="red" fw={500}>{announcements.filter(a => a.urgent).length} urgent</Text>
                   </Group>
@@ -148,10 +148,10 @@ export default function Announcements() {
               </div>
             ) : announcements.length === 0 ? (
               <Card shadow="sm" p="xl" radius="md" withBorder>
-                <Text align="center" py="md">No announcements at this time.</Text>
+                <Text ta="center" py="md">No announcements at this time.</Text>
               </Card>
             ) : (
-              <Stack spacing="md">
+              <Stack gap="md">
                 {announcements.map(announcement => (
                   <Card 
                     key={announcement.id} 
@@ -164,8 +164,8 @@ export default function Announcements() {
                     }}
                   >
                     <Stack>
-                      <Group position="apart">
-                        <Group spacing="xs">
+                      <Group justify="apart">
+                        <Group gap="xs">
                           <Text fw={700}>{announcement.title}</Text>
                           {announcement.urgent && (
                             <Badge color="red">Urgent</Badge>
@@ -185,7 +185,7 @@ export default function Announcements() {
       </Group>
       
       <Box style={{ position: "fixed", bottom: 0, width: "100vw", zIndex: 0 }}>
-        <Image src="../../images/vector.svg" radius="md" style={{ width: "100%", margin: 0 }} />
+        <Image src="../../images/vector.svg" radius="md" style={{ width: "100%", margin: 0 }} alt=""/>
       </Box>
     </Stack>
   );

@@ -2,9 +2,29 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { Loader, Stack, Text } from '@mantine/core';
 import supabase from '@/utils/supabase/client';
+import { FC, ComponentType } from 'react';
 
-export default function withAdminAuth(Component) {
-  return function AdminProtected(props) {
+interface AdminProtectedProps {
+  [key: string]: any;
+}
+
+interface User {
+  id: string;
+  email?: string;
+  user_metadata?: {
+    role?: string;
+  };
+}
+
+interface SupabaseAuthResponse {
+  data: {
+    user: User | null;
+  };
+  error: any;
+}
+
+export default function withAdminAuth(Component: ComponentType<any>): FC<AdminProtectedProps> {
+  return function AdminProtected(props: AdminProtectedProps) {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
@@ -13,7 +33,7 @@ export default function withAdminAuth(Component) {
       const checkAdminStatus = async () => {
         try {
           // Get current user
-          const { data: { user }, error } = await supabase.auth.getUser();
+          const { data: { user }, error }: SupabaseAuthResponse = await supabase.auth.getUser();
           
           if (error || !user) {
             router.push('/');
@@ -47,7 +67,7 @@ export default function withAdminAuth(Component) {
       };
       
       checkAdminStatus();
-    }, []);
+    }, [router]); // Add router to the dependency array
 
     if (loading) {
       return (

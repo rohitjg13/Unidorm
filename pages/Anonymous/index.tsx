@@ -234,7 +234,7 @@ export default function AnonymousReporting() {
 
       <Group className={styles.bottom}>
         <ScrollArea style={{ height: 'calc(100vh - 70px)', width: '100%' }}>
-          <Stack style={{ width: "80%", margin: "0 auto", padding: "1rem 0" }} spacing="xl">
+          <Stack style={{ width: "80%", margin: "0 auto", padding: "1rem 0" }} gap="xl">
             {/* Add the warning alert above the card */}
             <Alert 
               icon={<WarningTwoTone />} 
@@ -243,7 +243,7 @@ export default function AnonymousReporting() {
               radius="md"
             >
               <Text size="sm" mb={5}>
-                Your reports are only linked to this browser's local storage. For your privacy, we don't store any 
+                Your reports are only linked to this browser&apos;s local storage. For your privacy, we don&apos;t store any 
                 identifiable information about you.
               </Text>
               <Text size="sm" fw={500}>
@@ -271,10 +271,10 @@ export default function AnonymousReporting() {
                 disabled={isSubmitting}
               />
               
-              <Group position="apart">
+              <Group justify="apart">
                 <Button 
                   variant="outline" 
-                  leftIcon={<History />}
+                  leftSection={<History />}
                   onClick={fetchReportHistory}
                   disabled={isSubmitting}
                 >
@@ -320,13 +320,13 @@ export default function AnonymousReporting() {
         {loadingHistory ? (
           <Loader style={{ margin: "2rem auto", display: "block" }} />
         ) : reportThreads.length === 0 ? (
-          <Text align="center" py="xl">You haven't submitted any anonymous reports yet.</Text>
+          <Text ta="center" py="xl">You haven&apos;t submitted any anonymous reports yet.</Text>
         ) : (
-          <Stack spacing="lg">
+          <Stack gap="lg">
             {reportThreads.map(thread => (
               <Card key={thread.id} shadow="sm" p="md" radius="md" withBorder>
                 <Stack>
-                  <Group position="apart">
+                  <Group justify="apart">
                     <Text fw={600}>Report #{thread.id.substring(0, 8)}</Text>
                     <Badge color={getStatusColor(thread.status)}>{thread.status}</Badge>
                   </Group>
@@ -334,7 +334,7 @@ export default function AnonymousReporting() {
                   <Text size="sm" c="dimmed">Submitted: {formatDate(thread.created_at)}</Text>
                   
                   <Card withBorder p="sm">
-                    <Stack spacing="md">
+                    <Stack gap="md">
                       {reportMessages[thread.id]?.map((message, index) => (
                         <Group key={index} style={{ 
                           alignItems: 'flex-start',
@@ -391,7 +391,7 @@ export default function AnonymousReporting() {
       </Modal>
       
       <Box style={{ position: "fixed", bottom: 0, width: "100vw", zIndex: 0 }}>
-        <Image src="../../images/vector.svg" radius="md" style={{ width: "100%", margin: 0 }} />
+        <Image src="../../images/vector.svg" radius="md" style={{ width: "100%", margin: 0 }} alt=""/>
       </Box>
     </Stack>
   );

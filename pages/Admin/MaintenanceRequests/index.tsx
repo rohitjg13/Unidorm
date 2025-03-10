@@ -174,7 +174,7 @@ function MaintenanceRequests() {
 
       <Group className={styles.bottom} style={{ position: 'relative', zIndex: 1 }}>
         <ScrollArea style={{ height: 'calc(100vh - 70px)', width: '100%', padding: '1rem' }}>
-          <Stack style={{ width: '90%', maxWidth: '1000px', margin: '0 auto' }} spacing="md">
+          <Stack style={{ width: '90%', maxWidth: '1000px', margin: '0 auto' }} gap="md">
             <Card shadow="sm" p="md" radius="md" withBorder>
               <Stack>
                 <Text fw={700} size="lg">Maintenance Requests</Text>
@@ -188,18 +188,18 @@ function MaintenanceRequests() {
               </Card>
             ) : maintenanceRequests.length === 0 ? (
               <Card shadow="sm" p="xl" radius="md" withBorder>
-                <Text align="center">No maintenance requests found</Text>
+                <Text ta="center">No maintenance requests found</Text>
               </Card>
             ) : (
               maintenanceRequests.map((request) => (
                 <Card key={request.id} shadow="sm" p="md" radius="md" withBorder>
                   <Stack>
-                    <Group position="apart">
+                    <Group justify="apart">
                       <Text fw={600}>{request.name}</Text>
                       <Badge color={getStatusColor(request.status)}>{request.status}</Badge>
                     </Group>
                     
-                    <Group spacing="xs">
+                    <Group gap="xs">
                       <Text size="sm" fw={500}>Room:</Text>
                       <Text size="sm">{request.wing} Wing, Floor {request.floor}, Room {request.room_number}</Text>
                     </Group>
@@ -210,7 +210,7 @@ function MaintenanceRequests() {
                       <Text size="sm">{request.description}</Text>
                     </Card>
                     
-                    <Group position="right">
+                    <Group justify="right">
                       {updatingId === request.id ? (
                         <Loader size="sm" />
                       ) : (
@@ -243,7 +243,7 @@ function MaintenanceRequests() {
       </Group>
       
       <Box style={{ position: "fixed", bottom: 0, width: "100vw", zIndex: 0 }}>
-        <Image src="../../../images/vector.svg" radius="md" style={{ width: "100%", margin: 0 }} />
+        <Image src="../../../images/vector.svg" radius="md" style={{ width: "100%", margin: 0 }} alt="" />
       </Box>
     </Stack>
   );

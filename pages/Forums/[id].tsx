@@ -153,6 +153,12 @@ export default function PostDetail() {
     fetchPostAndReplies();
   }, [id]);
 
+  // Make sure the organizeReplies function is called when replies change
+  useEffect(() => {
+    // When replies state updates, this will run
+    console.log('Replies updated, total count:', replies.length);
+  }, [replies]);
+
   // Go back to forums page
   const goBack = () => {
     router.push('/Forums');
@@ -412,7 +418,12 @@ const organizeReplies = (allReplies: Reply[]): Reply[] => {
   return topLevelReplies;
 };
 
-// Update the ReplyCard component to reduce empty space and improve nested replies display
+// Add a memo for organized replies
+const organizedReplies = React.useMemo(() => {
+  return organizeReplies(replies);
+}, [replies]);
+
+// Update the ReplyCard component with a working handleLocalReply function
 const ReplyCard = ({ reply, depth = 0, parentExpanded = true }: { 
   reply: Reply; 
   depth?: number;
@@ -426,7 +437,52 @@ const ReplyCard = ({ reply, depth = 0, parentExpanded = true }: {
   const hasReplies = reply.replies && reply.replies.length > 0;
 
   const handleLocalReply = async () => {
-    // ...existing code...
+    try {
+      if (!checkAuth()) return;
+      
+      if (!localReplyText.trim()) return;
+      
+      setIsSubmitting(true);
+      
+      // Create nested reply object
+      const replyData = {
+        post_id: id as string, // Make sure to cast id to string
+        content: localReplyText,
+        user_id: user?.id,
+        username: user?.user_metadata?.name || user?.email?.split('@')[0] || 'Anonymous',
+        parent_id: reply.id // This links to the parent reply
+      };
+      
+      // Insert nested reply
+      const { data, error } = await supabase
+        .from('forum_replies')
+        .insert([replyData])
+        .select();
+        
+      if (error) {
+        console.error('Error creating nested reply:', error);
+        return;
+      }
+      
+      // Add the new reply to the main replies list
+      if (data && data.length > 0) {
+        // Update the replies state
+        setReplies(currentReplies => [...currentReplies, data[0]]);
+        
+        // This will cause the organizeReplies function to run again
+        // when the component re-renders, rebuilding the hierarchy
+        console.log('Added new nested reply:', data[0]);
+      }
+      
+      // Clear reply text and close the reply form
+      setLocalReplyText('');
+      setIsReplying(false);
+      
+    } catch (error) {
+      console.error('Unexpected error during nested reply submission:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Optimize indentation - make it narrower to reduce empty space
@@ -542,16 +598,14 @@ const ReplyCard = ({ reply, depth = 0, parentExpanded = true }: {
             {user && (
               <Button
                 variant="subtle"
-                size="xs"
-                compact={depth > 0} // More compact for nested
-                onClick={() => setIsReplying(!isReplying)}
-                style={{ 
-                  padding: depth > 0 ? '0 6px' : '0 8px', 
-                  height: depth > 0 ? '24px' : '28px', 
-                  color: '#3f6cd4',
-                  fontWeight: 500,
-                  fontSize: depth > 0 ? '12px' : '13px'
+                size={depth > 0 ? "xs" : "sm"}
+                style={{
+                  padding: depth > 0 ? '0 8px' : undefined,
+                  height: depth > 0 ? '24px' : undefined,
+                  minHeight: depth > 0 ? '24px' : undefined,
+                  fontSize: depth > 0 ? '12px' : undefined
                 }}
+                onClick={() => setIsReplying(!isReplying)}
               >
                 {isReplying ? "Cancel" : "Reply"}
               </Button>
@@ -583,12 +637,17 @@ const ReplyCard = ({ reply, depth = 0, parentExpanded = true }: {
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <Button
                 size={depth > 0 ? "xs" : "sm"}
-                compact={depth > 0}
+                style={{
+                  padding: depth > 0 ? '0 8px' : undefined,
+                  height: depth > 0 ? '24px' : undefined,
+                  minHeight: depth > 0 ? '24px' : undefined,
+                  fontSize: depth > 0 ? '12px' : undefined
+                }}
                 leftSection={<IconSend size={depth > 0 ? 14 : 16} />}
                 onClick={handleLocalReply}
                 loading={isSubmitting}
                 disabled={!localReplyText.trim()}
-                style={{ backgroundColor: '#3f6cd4' }}
+               
               >
                 Reply
               </Button>
@@ -748,7 +807,7 @@ const formatDate = (dateString: string | undefined): string => {
                     </Text>
                     <Text size="xs" color="dimmed">{formatDate(post.created_at)}</Text>
                   </Group>
-                  <Group spacing="xs">
+                  <Group gap="xs">
                     <IconUser style={{ color: '#3f6cd4' }} />
                     <Text size="sm" fw={500}>{post.username || "Anonymous"}</Text>
                   </Group>
@@ -818,7 +877,7 @@ const formatDate = (dateString: string | undefined): string => {
                   <Divider />
                   
                   {/* Vote buttons - more compact on mobile */}
-                  <Group position="apart" wrap="wrap">
+                  <Group justify="apart" wrap="wrap">
                     <Group gap="xs">
                       <Button 
                         variant={userVote === 'up' ? "filled" : "subtle"}
@@ -826,7 +885,6 @@ const formatDate = (dateString: string | undefined): string => {
                         onClick={() => handleVote('up')}
                         style={userVote === 'up' ? { backgroundColor: '#4CAF50', color: 'white' } : {}}
                         size="xs"
-                        compact
                       >
                         {(post?.upvotes ?? 0).toLocaleString()}
                       </Button>
@@ -836,7 +894,6 @@ const formatDate = (dateString: string | undefined): string => {
                         onClick={() => handleVote('down')}
                         style={userVote === 'down' ? { backgroundColor: '#F44336', color: 'white' } : {}}
                         size="xs"
-                        compact
                       >
                         {post.downvotes || 0}
                       </Button>
@@ -887,7 +944,7 @@ const formatDate = (dateString: string | undefined): string => {
                   
                   {replies.length > 0 ? (
                     <Stack gap="md">
-                      {organizeReplies(replies).map((reply) => (
+                      {organizedReplies.map((reply) => (
                         <ReplyCard 
                           key={reply.id} 
                           reply={reply} 

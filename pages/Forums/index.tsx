@@ -23,25 +23,6 @@ import { User } from '@supabase/supabase-js';
 
 const initialForumPosts: ForumPost[] = []; // Empty array as fallback data
 
-const bottomStyles = {
-  backgroundColor: '#fff',
-  minHeight: '95vh',
-  width: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'flex-start',
-  paddingTop: '0rem',
-  fontSize: 'calc(10px + 2vmin)',
-  color: '#3f6cd4',
-  position: 'relative',
-  top: 0,
-  bottom: 0,
-  margin: 0,
-  borderRadius: '4rem 4rem 0 0',
-  boxShadow: '0px 0px 10px 0px rgba(0, 0, 0, 0.1)',
-};
-
 interface ForumPost {
   id: string;
   title: string;
@@ -61,7 +42,12 @@ export default function Forum() {
   const [loading, setLoading] = useState(true);
   const [newPostModalOpen, setNewPostModalOpen] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
-  const [newPost, setNewPost] = useState({
+  const [newPost, setNewPost] = useState<{
+    title: string;
+    content: string;
+    image: File | null;
+    imagePreview: string | null;
+  }>({
     title: '',
     content: '',
     image: null,
@@ -70,7 +56,7 @@ export default function Forum() {
   
   const [user, setUser] = useState<User | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
-  const [userVotes, setUserVotes] = useState({});
+  const [userVotes, setUserVotes] = useState<{ [key: string]: 'up' | 'down' | undefined }>({});
   const [initialVotesLoaded, setInitialVotesLoaded] = useState(false);
   const [trendingTimePeriod, setTrendingTimePeriod] = useState('all');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -157,7 +143,7 @@ export default function Forum() {
   };
 
   // Handle upvote/downvote with Supabase
-  const handleVote = async (postId, voteType) => {
+  const handleVote = async (postId: string, voteType: 'up' | 'down') => {
     try {
       // Check if user is logged in
       if (!checkAuth()) return;
@@ -172,17 +158,17 @@ export default function Forum() {
       if (currentVote === voteType) {
         // User is clicking the same button again - remove their vote
         if (voteType === 'up') {
-          updatedVotes = { upvotes: Math.max(0, post.upvotes - 1) };
+          updatedVotes = { upvotes: Math.max(0, (post.upvotes || 1) - 1) };
         } else {
-          updatedVotes = { downvotes: Math.max(0, post.downvotes - 1) };
+          updatedVotes = { downvotes: Math.max(0, (post.downvotes || 1) - 1) };
         }
-        
+
         // Remove vote from database
         const { error: deleteError } = await supabase
           .from('forum_post_votes')
           .delete()
           .eq('post_id', postId)
-          .eq('user_id', user.id);
+          .eq('user_id', user?.id);
           
         if (deleteError) {
           console.error('Error removing vote:', deleteError);
@@ -203,14 +189,14 @@ export default function Forum() {
           if (currentVote === 'up') {
             // Changing from upvote to downvote
             updatedVotes = { 
-              upvotes: Math.max(0, post.upvotes - 1),
-              downvotes: post.downvotes + 1 
+              upvotes: Math.max(0, (post.upvotes || 1) - 1),
+              downvotes: (post.downvotes || 1) + 1 
             };
           } else {
             // Changing from downvote to upvote
             updatedVotes = { 
-              upvotes: post.upvotes + 1,
-              downvotes: Math.max(0, post.downvotes - 1) 
+              upvotes: (post.upvotes || -1) + 1,
+              downvotes: Math.max(0, (post.downvotes || 1) - 1) 
             };
           }
           
@@ -219,7 +205,7 @@ export default function Forum() {
             .from('forum_post_votes')
             .update({ vote_type: voteType })
             .eq('post_id', postId)
-            .eq('user_id', user.id);
+            .eq('user_id', user?.id || '');
             
           if (updateError) {
             console.error('Error updating vote:', updateError);
@@ -229,9 +215,9 @@ export default function Forum() {
         else {
           // User is voting for the first time
           if (voteType === 'up') {
-            updatedVotes = { upvotes: post.upvotes + 1 };
+            updatedVotes = { upvotes: (post.upvotes || 0) + 1 };
           } else {
-            updatedVotes = { downvotes: post.downvotes + 1 };
+            updatedVotes = { downvotes: (post.downvotes || 0) + 1 };
           }
           
           // Insert new vote
@@ -239,7 +225,7 @@ export default function Forum() {
             .from('forum_post_votes')
             .insert({ 
               post_id: postId, 
-              user_id: user.id, 
+              user_id: (user?.id || ''), 
               vote_type: voteType 
             });
             
@@ -271,6 +257,36 @@ export default function Forum() {
         console.error('Error updating post votes:', error);
         // Revert optimistic update on error
         fetchPosts();
+        const fetchUserVotes = async () => {
+          if (!user) {
+            setUserVotes({});
+            return;
+          }
+          
+          try {
+            const { data, error } = await supabase
+              .from('forum_post_votes')
+              .select('post_id, vote_type')
+              .eq('user_id', user.id);
+              
+            if (error) {
+              console.error('Error fetching user votes:', error);
+              return;
+            }
+            
+            // Transform to object for easy lookup
+            const votes: { [key: string]: 'up' | 'down' } = {};
+            data.forEach(vote => {
+              votes[vote.post_id] = vote.vote_type;
+            });
+            
+            setUserVotes(votes);
+            setInitialVotesLoaded(true);
+          } catch (error) {
+            console.error('Unexpected error fetching votes:', error);
+          }
+        };
+
         fetchUserVotes();
       }
     } catch (error) {
@@ -279,7 +295,7 @@ export default function Forum() {
   };
 
   // Navigate to post detail page
-  const goToPostDetail = (postId) => {
+  const goToPostDetail = (postId: string) => {
     router.push(`/Forums/${postId}`);
   };
 
@@ -323,7 +339,7 @@ export default function Forum() {
         image: imageUrl, // Use the uploaded image URL
         upvotes: 0,
         downvotes: 0,
-        user_id: user.id,
+        user_id: user?.id || '',
         username: user.user_metadata?.name || user.email?.split('@')[0] || 'Anonymous'
       };
 
@@ -387,7 +403,7 @@ export default function Forum() {
         }
         
         // Transform to object for easy lookup
-        const votes = {};
+        const votes: { [key: string]: 'up' | 'down' } = {};
         data.forEach(vote => {
           votes[vote.post_id] = vote.vote_type;
         });
@@ -404,11 +420,14 @@ export default function Forum() {
     }
   }, [user]);
 
-  // Add this function to filter posts based on time period
-  const getFilteredPosts = (allPosts, timePeriod) => {
+  interface FilteredPostsParams {
+    allPosts: ForumPost[];
+    timePeriod: string;
+  }
+
+  const getFilteredPosts = ({ allPosts, timePeriod }: FilteredPostsParams): ForumPost[] => {
     const now = new Date();
     
-    // Filter posts by time period
     const filtered = allPosts.filter(post => {
       if (!post.created_at) return false;
       
@@ -454,7 +473,7 @@ export default function Forum() {
   };
 
   // Render a single post card
-  const renderPostCard = (post) => (
+  const renderPostCard = (post: ForumPost) => (
     <Card 
       key={post.id} 
       shadow="sm" 
@@ -468,13 +487,13 @@ export default function Forum() {
       }}
     >
       <Stack>
-        <Group position="apart">
+        <Group justify="apart">
           <Text style={{ fontWeight: "bold" }}>{post.title}</Text>
           <Text size="xs" color="gray">
-            {post.created_at ? new Date(post.created_at).toLocaleString() : post.timestamp || "Recently"}
+            {post.created_at ? new Date(post.created_at).toLocaleString() : "Recently"}
           </Text>
         </Group>
-        <Text size="sm" color="gray">Posted by {post.username || post.user || "Anonymous"}</Text>
+        <Text size="sm" color="gray">Posted by {post.username || "Anonymous"}</Text>
         
         {/* Update image display to maintain aspect ratio */}
         {post.image && (
@@ -537,7 +556,7 @@ export default function Forum() {
               goToPostDetail(post.id);
             }}
           >
-            {post.replies_count || post.replies || 0} Replies
+            {post.replies_count || 0} Replies
           </Button>
         </Group>
       </Stack>
@@ -563,7 +582,7 @@ export default function Forum() {
           </BreadcrumbList>
         </Breadcrumb>
         {user ? (
-          <Group position="right">
+          <Group justify="right">
             <Text color="white" size="sm">{user.user_metadata?.name || user.email?.split('@')[0]}</Text>
             <AccountCircle style={{ scale: "1.75", color: "white" }} />
           </Group>
@@ -578,7 +597,24 @@ export default function Forum() {
         )}
       </SimpleGrid>
       
-      <Group style={{ ...bottomStyles, position: 'relative' }}>
+      <Group style={{
+          position: 'relative',
+          backgroundColor: '#fff',
+          minHeight: '95vh',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          paddingTop: '0rem',
+          fontSize: 'calc(10px + 2vmin)',
+          color: '#3f6cd4',
+          top: 0,
+          bottom: 0,
+          margin: 0,
+          borderRadius: '4rem 4rem 0 0',
+          boxShadow: '0px 0px 10px 0px rgba(0, 0, 0, 0.1)',
+      }}>
         <Stack gap="lg" p="md" style={{ 
           maxWidth: "600px", 
           margin: "auto", 
@@ -630,10 +666,10 @@ export default function Forum() {
                 ) : (
                   <Stack gap="md">
                     {forumPosts.length > 0 ? 
-                      getFilteredPosts(forumPosts, trendingTimePeriod).map(renderPostCard) : 
+                      getFilteredPosts({ allPosts: forumPosts, timePeriod: trendingTimePeriod }).map(renderPostCard) : 
                       <Text ta="center" py="xl">No posts yet. Be the first to post!</Text>
                     }
-                    {getFilteredPosts(forumPosts, trendingTimePeriod).length === 0 && forumPosts.length > 0 && (
+                    {getFilteredPosts({ allPosts: forumPosts, timePeriod: trendingTimePeriod }).length === 0 && forumPosts.length > 0 && (
                       <Text ta="center" py="xl">No posts for this time period. Try another filter.</Text>
                     )}
                   </Stack>
@@ -758,7 +794,7 @@ export default function Forum() {
         title="Sign In Required"
         size="sm"
       >
-        <Stack spacing="md">
+        <Stack gap="md">
           <Text>Please sign in to continue.</Text>
           <Button
             onClick={handleGoogleLogin}

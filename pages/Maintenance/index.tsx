@@ -261,12 +261,12 @@ export default function MaintenanceStudent() {
             <FloorDrawer 
               selectedFloor={selectedFloor}
               setSelectedFloor={setSelectedFloor}
-              disabled={isSubmitting}
+              // disabled={isSubmitting}
             />
             <WingDrawer 
               selectedWing={selectedWing}
               setSelectedWing={setSelectedWing}
-              disabled={isSubmitting}
+              // disabled={isSubmitting}
             />
             <TextInput
                 label="Room Number"

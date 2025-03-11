@@ -190,7 +190,7 @@ function AnonymousReportsAdmin() {
       setUpdatingStatus(null);
     }
   };
-  
+
   // Format date for display
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -211,7 +211,6 @@ function AnonymousReportsAdmin() {
     }
   };
   
-  // Load initial data
   useEffect(() => {
     fetchReportThreads('Pending');
   }, []);
@@ -250,7 +249,6 @@ function AnonymousReportsAdmin() {
               </Stack>
             </Card>
 
-            {/* Fix the problematic Tabs component */}
             <div>
               <div style={{ display: 'flex', borderBottom: '1px solid #e9ecef', marginBottom: '15px' }}>
                 {['pending', 'ongoing', 'resolved', 'rejected', 'all'].map((tab) => (

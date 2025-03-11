@@ -56,7 +56,7 @@ interface Reply {
 export default function PostDetail() {
   const router = useRouter();
   const { id } = router.query;
-  
+
   const [post, setPost] = useState<{ id: string; title: string; content: string; created_at: string; username: string; image?: string; upvotes: number; downvotes: number } | null>(null);
   const [replies, setReplies] = useState<Reply[]>([]);
   const [loading, setLoading] = useState(true);

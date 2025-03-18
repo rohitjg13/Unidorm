@@ -441,11 +441,10 @@ function SafetyNotifsAdmin() {
           
           <TimeInput
             label="Time"
-            format="24"
+            withSeconds={false}
             value={notificationTime}
-            onChange={(value) => setNotificationTime(value)}
+            onChange={(event) => setNotificationTime(event.currentTarget.value)}
             required
-            clearable={false}
             size="md"
           />
           
@@ -453,7 +452,7 @@ function SafetyNotifsAdmin() {
             label="Expected People (0 = No information available)"
             placeholder="0"
             value={affectedPersons}
-            onChange={(value) => setAffectedPersons(value)}
+            onChange={(value) => setAffectedPersons(typeof value === 'number' ? value : '')}
             min={0}
           />
           
@@ -528,11 +527,9 @@ function SafetyNotifsAdmin() {
           
           <TimeInput
             label="Time"
-            format="24"
             value={notificationTime}
-            onChange={(value) => setNotificationTime(value)}
+            onChange={(event) => setNotificationTime(event.currentTarget.value)}
             required
-            clearable={false}
             size="md"
           />
           
@@ -540,7 +537,7 @@ function SafetyNotifsAdmin() {
             label="Expected People (0 = No information available)"
             placeholder="0"
             value={affectedPersons}
-            onChange={(value) => setAffectedPersons(value)}
+            onChange={(value) => setAffectedPersons(typeof value === 'number' ? value : '')}
             min={0}
           />
           

@@ -12,8 +12,11 @@ import {
 } from "@/components/ui/breadcrumb"
 import LoginIcon from '@mui/icons-material/Login';
 import LogoutIcon from '@mui/icons-material/Logout';
+import { useRouter } from "next/router";
 
 export default function IndexPage() {
+  const router = useRouter();
+
     const buttonStyle = {
          width: "calc(50vw - 4rem)", 
          height: "calc(50vw - 4rem)", 
@@ -48,13 +51,13 @@ export default function IndexPage() {
         <Group style={{ display: "flex", flexDirection: "column", justifyContent: "centre", alignItems: "center", height: "85vh", position: "relative" }}>
             <Stack gap={"6rem"} style={{ display: "flex", flexDirection: "column", justifyContent: "spece-between", alignItems: "center", height: "100%" }}>
                 <Group style={{ width: "100vw", display: "flex", alignItems: "center", justifyContent: "space-evenly" }}>
-                    <UnstyledButton style={buttonStyle}>
+                    <UnstyledButton style={buttonStyle} onClick={() => {router.push("/CheckInOut/CheckIn")}}>
                         <SimpleGrid cols={1} style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
                             <LoginIcon style={{ scale: "2.25", color: "#3f6cd4" }} />
                             <Text style={{ color: "#3f6cd4", fontSize: "1.25rem" }}>Check In</Text>
                         </SimpleGrid>
                     </UnstyledButton>
-                    <UnstyledButton style={buttonStyle}>
+                    <UnstyledButton style={buttonStyle} onClick={() => {router.push("/CheckInOut/CheckOut")}}>
                         <SimpleGrid cols={1} style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
                             <LogoutIcon style={{ scale: "2.25", color: "#3f6cd4" }} />
                             <Text style={{ color: "#3f6cd4", fontSize: "1.25rem" }}>Check Out</Text>

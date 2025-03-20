@@ -12,7 +12,8 @@ import {
   Image, 
   Modal, 
   ActionIcon,
-  LoadingOverlay
+  LoadingOverlay,
+  ScrollArea
 } from "@mantine/core";
 import { ArrowBack, AccountCircle } from "@material-ui/icons";
 import { 
@@ -27,8 +28,9 @@ import styles from "../../../../styles/Template.module.css";
 import supabase from '../../../utils/supabase/client';
 import { useRouter } from 'next/router';
 import { notifications } from '@mantine/notifications';
-import { IconEye, IconCheck, IconX } from '@tabler/icons-react';
-import withAdminAuth from "@/components/withAdminAuth"; // Import the HOC
+import { IconEye, IconCheck } from '@tabler/icons-react';
+import withAdminAuth from "@/components/withAdminAuth";
+import { useMediaQuery } from '@mantine/hooks';
 
 type Checkout = {
   id: number;
@@ -36,7 +38,7 @@ type Checkout = {
   checkout_date: string;
   checkout_time: string;
   image_url: string;
-  status: 'pending' | 'completed' | 'rejected';
+  status: 'pending' | 'completed';
   created_at: string;
 };
 
@@ -48,6 +50,7 @@ function AdminCheckOutPage() {
   const [selectedImage, setSelectedImage] = useState('');
   
   const router = useRouter();
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   useEffect(() => {
     fetchCheckouts();
@@ -76,26 +79,26 @@ function AdminCheckOutPage() {
     }
   };
 
-  const updateCheckoutStatus = async (id: number, status: 'completed' | 'rejected') => {
+  const updateCheckoutStatus = async (id: number) => {
     try {
       setLoading(true);
       const { error } = await supabase
         .from('checkouts')
-        .update({ status })
+        .update({ status: 'completed' })
         .eq('id', id);
       
       if (error) throw error;
       
       notifications.show({
         title: 'Success',
-        message: `Checkout request ${status === 'completed' ? 'approved' : 'rejected'}`,
-        color: status === 'completed' ? 'green' : 'red',
+        message: 'Checkout request noted',
+        color: 'green',
       });
       
       // Update local state
       setCheckouts(prevCheckouts => 
         prevCheckouts.map(checkout => 
-          checkout.id === id ? { ...checkout, status } : checkout
+          checkout.id === id ? { ...checkout, status: 'completed' } : checkout
         )
       );
     } catch (error) {
@@ -118,9 +121,49 @@ function AdminCheckOutPage() {
   // Filter checkouts based on active tab
   const filteredCheckouts = checkouts.filter(checkout => checkout.status === activeTab);
 
+  // Mobile card view for checkout requests
+  const renderMobileCheckoutCard = (checkout: Checkout) => (
+    <Paper shadow="xs" p="md" withBorder radius="md" mb="md" key={checkout.id}>
+      <Stack gap="xs">
+        <Group justify="apart">
+          <Text fw={600}>{checkout.student_name}</Text>
+          {activeTab === 'completed' && (
+            <Text color="green" size="sm">Noted</Text>
+          )}
+        </Group>
+        
+        <Group justify="apart">
+          <Text size="sm">Date: {new Date(checkout.checkout_date).toLocaleDateString()}</Text>
+          <Text size="sm">Time: {checkout.checkout_time}</Text>
+        </Group>
+        
+        <Group justify="apart" mt="xs">
+          <ActionIcon 
+            color="blue" 
+            variant="light" 
+            onClick={() => openImageModal(checkout.image_url)}
+          >
+            <IconEye size="1.25rem" />
+          </ActionIcon>
+          
+          {activeTab === 'pending' && (
+            <Button 
+              size="xs" 
+              color="green"
+              leftSection={<IconCheck size="1rem" />}
+              onClick={() => updateCheckoutStatus(checkout.id)}
+            >
+              Noted
+            </Button>
+          )}
+        </Group>
+      </Stack>
+    </Paper>
+  );
+
   return (
     <Stack justify="flex-start" gap={0} className={styles.container}>
-      <LoadingOverlay visible={loading} overlayBlur={2} />
+      <LoadingOverlay visible={loading} />
       
       <SimpleGrid className={styles.header} cols={2}>
         <ArrowBack 
@@ -129,16 +172,20 @@ function AdminCheckOutPage() {
         />
         <Breadcrumb>
           <BreadcrumbList>
+            {!isMobile ? (
+              <>
+                <BreadcrumbItem>
+                  <BreadcrumbLink style={{color: "#dedede"}} href="/Admin/Dashboard">Admin</BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="text-white" />
+                <BreadcrumbItem>
+                  <BreadcrumbLink style={{color: "#dedede"}} href="/Admin/CheckInOut">Check In/Out</BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="text-white" />
+              </>
+            ) : null}
             <BreadcrumbItem>
-              <BreadcrumbLink style={{color: "#dedede"}} href="/Admin/Dashboard">Admin</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator className="text-white" />
-            <BreadcrumbItem>
-              <BreadcrumbLink style={{color: "#dedede"}} href="/Admin/CheckInOut">Check In/Out</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator className="text-white" />
-            <BreadcrumbItem>
-              <BreadcrumbPage className="text-white">Check Out Requests</BreadcrumbPage>
+              <BreadcrumbPage className="text-white">Check Out</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
@@ -148,68 +195,60 @@ function AdminCheckOutPage() {
       <Box className={styles.bottom} p="md">
         <Paper shadow="sm" p="md" withBorder style={{ width: '100%', maxWidth: 1200, margin: '0 auto' }}>
           <Tabs value={activeTab} onChange={setActiveTab}>
-            <Tabs.List>
+            <Tabs.List grow={isMobile}>
               <Tabs.Tab value="pending">Pending</Tabs.Tab>
               <Tabs.Tab value="completed">Completed</Tabs.Tab>
-              <Tabs.Tab value="rejected">Rejected</Tabs.Tab>
             </Tabs.List>
 
             <Tabs.Panel value={activeTab || 'pending'} pt="xs">
               {filteredCheckouts.length === 0 ? (
                 <Text p="lg" ta="center">No {activeTab} checkout requests found.</Text>
+              ) : isMobile ? (
+                <Stack gap="md" mt="md">
+                  {filteredCheckouts.map(renderMobileCheckoutCard)}
+                </Stack>
               ) : (
-                <Table striped>
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th>Student Name</Table.Th>
-                      <Table.Th>Date</Table.Th>
-                      <Table.Th>Time</Table.Th>
-                      <Table.Th>DigiCampus</Table.Th>
-                      <Table.Th>Actions</Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {filteredCheckouts.map((checkout) => (
-                      <Table.Tr key={checkout.id}>
-                        <Table.Td>{checkout.student_name}</Table.Td>
-                        <Table.Td>{new Date(checkout.checkout_date).toLocaleDateString()}</Table.Td>
-                        <Table.Td>{checkout.checkout_time}</Table.Td>
-                        <Table.Td>
-                          <ActionIcon onClick={() => openImageModal(checkout.image_url)}>
-                            <IconEye size="1.25rem" />
-                          </ActionIcon>
-                        </Table.Td>
-                        <Table.Td>
-                          {activeTab === 'pending' && (
-                            <Group>
+                <ScrollArea>
+                  <Table striped>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>Student Name</Table.Th>
+                        <Table.Th>Date</Table.Th>
+                        <Table.Th>Time</Table.Th>
+                        <Table.Th>DigiCampus</Table.Th>
+                        <Table.Th>Actions</Table.Th>
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {filteredCheckouts.map((checkout) => (
+                        <Table.Tr key={checkout.id}>
+                          <Table.Td>{checkout.student_name}</Table.Td>
+                          <Table.Td>{new Date(checkout.checkout_date).toLocaleDateString()}</Table.Td>
+                          <Table.Td>{checkout.checkout_time}</Table.Td>
+                          <Table.Td>
+                            <ActionIcon onClick={() => openImageModal(checkout.image_url)}>
+                              <IconEye size="1.25rem" />
+                            </ActionIcon>
+                          </Table.Td>
+                          <Table.Td>
+                            {activeTab === 'pending' ? (
                               <Button 
                                 size="xs" 
                                 color="green"
                                 leftSection={<IconCheck size="1rem" />}
-                                onClick={() => updateCheckoutStatus(checkout.id, 'completed')}
+                                onClick={() => updateCheckoutStatus(checkout.id)}
                               >
-                                Approve
+                                Noted
                               </Button>
-                              <Button 
-                                size="xs" 
-                                color="red"
-                                leftSection={<IconX size="1rem" />}
-                                onClick={() => updateCheckoutStatus(checkout.id, 'rejected')}
-                              >
-                                Reject
-                              </Button>
-                            </Group>
-                          )}
-                          {activeTab !== 'pending' && (
-                            <Text color={activeTab === 'completed' ? 'green' : 'red'}>
-                              {activeTab === 'completed' ? 'Approved' : 'Rejected'}
-                            </Text>
-                          )}
-                        </Table.Td>
-                      </Table.Tr>
-                    ))}
-                  </Table.Tbody>
-                </Table>
+                            ) : (
+                              <Text color="green">Noted</Text>
+                            )}
+                          </Table.Td>
+                        </Table.Tr>
+                      ))}
+                    </Table.Tbody>
+                  </Table>
+                </ScrollArea>
               )}
             </Tabs.Panel>
           </Tabs>
@@ -220,12 +259,13 @@ function AdminCheckOutPage() {
         opened={imageModal} 
         onClose={() => setImageModal(false)}
         title="DigiCampus Screenshot"
-        size="lg"
+        size={isMobile ? "sm" : "lg"}
+        centered
       >
         <Image
           src={selectedImage}
           fit="contain"
-          height={500}
+          height={isMobile ? 300 : 500}
           alt="DigiCampus Screenshot"
         />
       </Modal>

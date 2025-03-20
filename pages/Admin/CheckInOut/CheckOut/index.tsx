@@ -277,5 +277,4 @@ function AdminCheckOutPage() {
   );
 }
 
-// Export the component wrapped with the admin authentication HOC
 export default withAdminAuth(AdminCheckOutPage);

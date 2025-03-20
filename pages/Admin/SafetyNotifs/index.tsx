@@ -91,7 +91,7 @@ function SafetyNotifsAdmin() {
         });
         return;
       }
-      
+
       // Format date for Supabase (YYYY-MM-DD)
       const formattedDate = notificationDate.toISOString().split('T')[0];
       
